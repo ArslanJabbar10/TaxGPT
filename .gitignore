@@ -1,0 +1,53 @@
+# General Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Frontend Specific
+Frontend/node_modules/
+Frontend/dist/
+Frontend/dist-ssr/
+Frontend/.local/
+Frontend/test-results/
+Frontend/playwright-report/
+Frontend/blob-report/
+Frontend/tests/
+Frontend/tests-examples/
+Frontend/playwright.config.js
+
+# Frontend Configuration Files to Ignore
+Frontend/eslint.config.js
+Frontend/playwright.config.js
+
+# Backend Specific
+Backend/__pycache__/
+Backend/.venv/
+Backend/testingPDFs/ 
+Backend/.env
+Backend/vectore_index.faiss
+Backend/chunks.json
+Backend/api_key.py
+
+# IDE/Editor Files
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# # Playwright and Test Reports
+# /test-results/
+# /playwright-report/
+# /blob-report/
+# /playwright/.cache/

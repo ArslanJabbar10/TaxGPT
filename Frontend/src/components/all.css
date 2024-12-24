@@ -1,0 +1,19 @@
+:root {
+    --sidebar-bg-color: #f2f2f2;
+    --hover-bg-color: #d7dbdd;
+    --active-bg-color: #d7dbdd;
+    --active-border-color: #d7dbdd;
+    --light-dark-bg-color: #2a2a2a;
+    --light-dark-hover-color: #393939;
+    --dark-dark-bg-color: #202020;
+  }
+  
+/* Light mode placeholder */
+.light-mode.custom-textarea::placeholder {
+  color: #333; /* Light mode placeholder color */
+}
+
+/* Dark mode placeholder */
+.dark-mode.custom-textarea::placeholder {
+  color: #adadad; /* Dark mode placeholder color */
+}
