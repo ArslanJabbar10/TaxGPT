@@ -71,7 +71,7 @@ const Sidebar = (props) => {
                 ? "var(--light-dark-bg-color)"
                 : "var(--light-dark-bg-color)"
               : isMobile
-              ? "#e6e6e6"
+              ? "var(--sidebar-bg-color)"
               : "var(--sidebar-bg-color)",
             padding: "10px",
             display: "flex",

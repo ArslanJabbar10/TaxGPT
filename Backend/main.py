@@ -279,6 +279,74 @@ def get_messages():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+    
+@app.route('/api/generate_title', methods=['POST'])
+def generate_title():
+    try:
+        if "user_id" not in session:
+            # app.logger.error("Unauthorized access attempt.")
+            return jsonify({"error": "Unauthorized"}), 401
+
+        data = request.get_json()
+        chat_id = data.get("chat_id")
+        user_message = data.get("user_message")
+        model_response = data.get("model_response")
+        
+        # from here
+
+        # Log inputs for debugging
+        # app.logger.debug(f"Chat ID: {chat_id}, User Message: {user_message}, Model Response: {model_response}")
+
+        if not chat_id or not user_message or not model_response:
+            # app.logger.error("Missing required data.")
+            return jsonify({"error": "Missing required data"}), 400
+
+        # Combine user message and model response
+        combined_text = f"User: {user_message}\nModel: {model_response}"
+        input_text = f"generate a title: {combined_text}"
+
+        # Log input to model
+        # app.logger.debug(f"Input text for T5 model: {input_text}")
+
+        # Tokenize with attention mask
+        inputs = tokenizer(input_text, return_tensors="pt", truncation=True, padding=True)
+
+        # Generate a title using the T5 model
+        outputs = model.generate(
+            inputs.input_ids,
+            attention_mask=inputs.attention_mask,  # Include attention mask
+            max_new_tokens=15,  # Use max_new_tokens instead of max_length
+            num_beams=4,
+            early_stopping=True,
+            pad_token_id=tokenizer.eos_token_id,  # Explicitly set pad token
+        )
+        new_title = tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
+
+
+        # till here
+
+        # Truncate the title to fit the database column
+        max_title_length = 120
+        if len(new_title) > max_title_length:
+            new_title = new_title[:max_title_length]
+
+        # Log generated title
+        # app.logger.debug(f"Generated title (truncated): {new_title}")
+
+        # Update the chat title in the database
+        chat = Chat.query.filter_by(id=chat_id, user_id=session["user_id"]).first()
+        if chat:
+            chat.title = new_title
+            db.session.commit()
+            return jsonify({"new_title": new_title}), 200
+        else:
+            # app.logger.error("Chat not found or unauthorized.")
+            return jsonify({"error": "Chat not found"}), 404
+
+    except Exception as e:
+        # app.logger.error(f"Error in generate_title: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/api/add_message', methods=['POST'])
@@ -323,7 +391,7 @@ def add_message():
         # Add model's response to the database
         model_message = Message(
             chat_id=chat_id,
-            sender="bot",
+            sender="model",
             content=model_response_content
         )
         db.session.add(model_message)

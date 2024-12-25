@@ -17,3 +17,66 @@
 .dark-mode.custom-textarea::placeholder {
   color: #adadad; /* Dark mode placeholder color */
 }
+
+/* General Styling for WebKit Browsers (Chrome, Edge, Safari) */
+
+/* Light Mode */
+.light-mode-scrollbar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.light-mode-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(45deg, #e6e6e6, #d7dbdd);
+  border-radius: 10px;
+}
+
+.light-mode-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+
+.light-mode-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(45deg, #d4d4d4, #d7dbdd);
+}
+
+/* Dark Mode */
+.dark-mode-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dark-mode-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(45deg, #6c63ff, #1e1e1e);
+  border-radius: 10px;
+}
+
+.dark-mode-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+.dark-mode-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(45deg, #504cff, #2e2e2e);
+}
+
+/* Styling for Firefox */
+.light-mode-scrollbar_sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: #d7dbdd #f2f2f2;
+}
+
+.light-mode-scrollbar_chat {
+  scrollbar-width: thin;
+  scrollbar-color: #d7dbdd #FFFFFF;
+}
+
+.dark-mode-scrollbar_chat {
+  scrollbar-width: thin;
+  scrollbar-color: #393939 #202020;
+}
+
+.dark-mode-scrollbar_sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: #393939 #2a2a2a;
+}

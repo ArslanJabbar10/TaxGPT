@@ -166,7 +166,7 @@ const Navbar2 = (props) => {
             transform: isMobile ? "translateX(-50%)" : "none",
             fontSize: "20px",
             fontWeight: "500",
-            color: dark ? "#FFFFFF" : "#000000",
+            color: dark ? "#999999" : "#000000",
             whiteSpace: "nowrap",
             fontFamily: "sans-serif",
           }}

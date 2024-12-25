@@ -91,7 +91,7 @@ const SideBarC1 = (props) => {
               : "#666", // Muted text when disabled
             padding: "10px",
             marginBottom: "30px",
-            marginTop: "40px",
+            marginTop: "30px",
             border: "none",
             borderRadius: "30px",
             cursor: newChatClickable ? "pointer" : "default", // Change cursor style

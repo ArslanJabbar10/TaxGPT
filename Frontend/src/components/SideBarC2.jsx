@@ -9,12 +9,20 @@ const SideBarC2 = (props) => {
   const { dark } = useContext(DarkMode);
   const [visibleDropdown, setVisibleDropdown] = useState(null);
   const dropdownRef = useRef(null); // Reference to detect clicks outside
-  const iconRef = useRef([]); // Reference array for each chat icon
   const [editingIndex, setEditingIndex] = useState(null); // Track which chat is being edited
   const [tempText, setTempText] = useState(""); // Temporary text for editing
+  const [hoveredIndex, setHoveredIndex] = useState(null); // Track which chat is hovered
 
   const toggleDropdown = (index) => {
     setVisibleDropdown(visibleDropdown === index ? null : index);
+  };
+
+  const handleMouseEnter = (index) => {
+    setHoveredIndex(index); // Set hovered index on mouse enter
+  };
+
+  const handleMouseLeave = () => {
+    setHoveredIndex(null); // Reset hovered index on mouse leave
   };
 
   // Close dropdown on clicking outside
@@ -115,7 +123,12 @@ const SideBarC2 = (props) => {
   return (
     <>
       {/* Chat History */}
-      <div style={{ flexGrow: 1, overflowY: "auto", marginBottom: "10px" }}>
+      <div
+        className={`custom-textarea ${
+          dark ? "dark-mode-scrollbar_sidebar" : "light-mode-scrollbar_sidebar"
+        }`}
+        style={{ flexGrow: 1, overflowY: "auto", marginBottom: "10px" }}
+      >
         {[...props.chats].reverse().map((chat, index) => {
           const isActive = chat.id === props.activeChat?.id;
           return (
@@ -124,14 +137,18 @@ const SideBarC2 = (props) => {
               style={{
                 padding: "8px",
                 marginBottom: "3px",
-                backgroundColor: dark
-                  ? isActive
-                    ? "var(--light-dark-hover-color)" // Dark mode and active chat
-                    : "var(--light-dark-bg-color)" // Dark mode and not active chat
-                  : isActive
-                  ? "var(--active-bg-color)" // Light mode and active chat
-                  : "var(--sidebar-bg-color)", // Light mode and not active chat
-
+                backgroundColor:
+                  hoveredIndex === index
+                    ? dark
+                      ? "var(--light-dark-hover-color)" // Dark mode hover color
+                      : "var(--hover-bg-color)" // Light mode hover color
+                    : dark
+                    ? isActive
+                      ? "var(--light-dark-hover-color)" // Dark mode and active chat
+                      : "var(--light-dark-bg-color)" // Dark mode and not active chat
+                    : isActive
+                    ? "var(--active-bg-color)" // Light mode and active chat
+                    : "var(--sidebar-bg-color)", // Light mode and not active chat
                 border: dark
                   ? isActive
                     ? "2px solid var(--light-dark-hover-color)" // Dark mode and active chat
@@ -148,18 +165,8 @@ const SideBarC2 = (props) => {
                 alignItems: "center",
               }}
               onClick={() => handleChatClick(index)} // Set this chat as active
-              onMouseEnter={(e) =>
-                !isActive &&
-                (e.currentTarget.style.backgroundColor = dark
-                  ? "var(--light-dark-hover-color)" // Dark mode hover color
-                  : "var(--hover-bg-color)")
-              }
-              onMouseLeave={(e) =>
-                !isActive &&
-                (e.currentTarget.style.backgroundColor = dark
-                  ? "var(--light-dark-bg-color)" // Dark mode background color
-                  : "var(--sidebar-bg-color)")
-              }
+              onMouseEnter={() => handleMouseEnter(index)} // Track hovered chat
+              onMouseLeave={handleMouseLeave} // Reset hovered chat
             >
               {/* Editable or Static Text */}
               {editingIndex === props.chats.length - 1 - index ? (
@@ -187,21 +194,35 @@ const SideBarC2 = (props) => {
                     flex: 1,
                     textAlign: "left",
                     color: dark ? "#FFFFFF" : "#000000",
+                    whiteSpace: "nowrap", // Prevent text wrapping
+                    overflow: "hidden", // Hide overflowing text
+                    textOverflow: "clip", // Ensure no ellipsis is shown
+                    position: "relative", // Ensure the fade effect works
+                    maskImage:
+                      "linear-gradient(to right, black 80%, transparent 100%)", // Apply fade
+                    WebkitMaskImage:
+                      "linear-gradient(to right, black 80%, transparent 100%)", // For WebKit browsers
                   }}
                 >
                   {chat.text}
                 </span>
               )}
-              <span
-                ref={(el) => (iconRef.current[index] = el)} // Save reference to the icon
-                onClick={() => toggleDropdown(index)}
-                style={{
-                  cursor: "pointer",
-                  color: dark ? "#FFFFFF" : "#000000",
-                }}
-              >
-                {chat.icon}
-              </span>
+              {/* Conditionally Render Icon */}
+              {hoveredIndex === index && (
+                <span
+                  style={{
+                    cursor: "pointer",
+                    color: dark ? "#FFFFFF" : "#000000",
+                    marginLeft: "4px",
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent triggering chat click
+                    toggleDropdown(index); // Toggle dropdown visibility for this chat
+                  }}
+                >
+                  {chat.icon}
+                </span>
+              )}
               {visibleDropdown === index && (
                 <ul
                   ref={dropdownRef}

@@ -48,7 +48,7 @@ const ModelUserChat = (props) => {
           flexDirection: "column",
           justifyContent: "center", // Center content vertically
           alignItems: "center", // Center content horizontally
-          height: "calc(100vh - 162px)", // Subtract the height of the navbar
+          height: "100%",
           maxWidth: "800px",
           margin: "0 auto",
           borderRadius: "10px",
@@ -78,11 +78,12 @@ const ModelUserChat = (props) => {
         position: "relative",
         display: "flex",
         flexDirection: "column",
-        height: "calc(100vh - 163px)", // Subtract the height of the navbar
+        // height: "calc(100vh - 163px)", // Subtract the height of the navbar
+        height: "100%", // Take up all available space
         maxWidth: "800px",
         margin: "0 auto",
         borderRadius: "10px",
-        overflow: "hidden",
+        // overflow: "hidden",
         zIndex: 1,
         backgroundColor: dark ? "var(--dark-dark-bg-color)" : "#FFFFFF",
       }}
@@ -92,7 +93,7 @@ const ModelUserChat = (props) => {
         style={{
           flexGrow: 1,
           padding: "10px",
-          overflowY: "auto",
+          // overflowY: "auto",
         }}
       >
         {props.messages.map((message, index) => (

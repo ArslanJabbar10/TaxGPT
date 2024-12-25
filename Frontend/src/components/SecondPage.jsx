@@ -144,6 +144,14 @@ const SecondPage = () => {
     }
   };
 
+  const updateChatTitle = (chatId, newTitle) => {
+    setChats((prevChats) =>
+      prevChats.map((chat) =>
+        chat.id === chatId ? { ...chat, text: newTitle } : chat
+      )
+    );
+  };
+
   const isPlusClicked = () => {
     setMessages([]);
   };
@@ -199,6 +207,7 @@ const SecondPage = () => {
                     messages={messages}
                     setMessages={setMessages}
                     activeChat={activeChat}
+                    updateChatTitle={updateChatTitle}
                   />
                 </div>
               </div>

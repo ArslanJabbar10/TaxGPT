@@ -28,7 +28,7 @@ Backend/__pycache__/
 Backend/.venv/
 Backend/testingPDFs/ 
 Backend/.env
-Backend/vectore_index.faiss
+Backend/vector_index.faiss
 Backend/chunks.json
 Backend/api_key.py
 

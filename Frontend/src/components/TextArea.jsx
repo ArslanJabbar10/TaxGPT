@@ -12,6 +12,28 @@ const TextArea = (props) => {
   const [inputValue, setInputValue] = useState(""); // State for user input
   const { changingClickable } = useContext(ChatClickable);
 
+  const [inputHeight, setInputHeight] = useState(55); // Initial height of textarea
+  const maxHeight = 120; // Maximum height of the textarea and parent div
+
+  // Check if it's the first message in the active chat
+  const isFirstMessage = props.messages.length === 0;
+
+  const handleInputChange = (e) => {
+    const textarea = e.target;
+    // Reset height to auto to calculate scrollHeight correctly
+    textarea.style.height = "auto";
+
+    // Adjust the height dynamically, but not exceed the maxHeight
+    const newHeight = Math.min(textarea.scrollHeight, maxHeight);
+
+    textarea.style.height = `${newHeight}px`;
+
+    setInputHeight(newHeight);
+
+    // Update the input value
+    setInputValue(textarea.value);
+  };
+
   // Handle sending a message
   const handleSend = async () => {
     if (inputValue.trim() === "" || !props.activeChat) return;
@@ -36,7 +58,27 @@ const TextArea = (props) => {
 
       // Step 3: Add model (bot) response if the backend responds
       if (response.ok) {
-        props.onSendMessage({ sender: "bot", text: data.model_response });
+        props.onSendMessage({ sender: "model", text: data.model_response });
+        if (isFirstMessage) {
+          const titleResponse = await fetch(
+            "http://localhost:5000/api/generate_title",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({
+                chat_id: props.activeChat.id,
+                user_message: inputValue.trim(),
+                model_response: data.model_response,
+              }),
+            }
+          );
+          const titleData = await titleResponse.json();
+          if (titleResponse.ok) {
+            // Update the chat title in the frontend
+            props.updateChatTitle(props.activeChat.id, titleData.new_title);
+          }
+        }
       } else {
         console.error("Error getting model response:", data.error);
       }
@@ -45,6 +87,7 @@ const TextArea = (props) => {
     }
 
     setInputValue(""); // Clear input field
+    setInputHeight(55); // Reset height to the initial value
     changingClickable(); // Any additional logic
   };
 
@@ -52,6 +95,7 @@ const TextArea = (props) => {
     <>
       <div className="container">
         <div
+          className="the_div"
           style={{
             position: "relative",
             display: "flex",
@@ -62,16 +106,20 @@ const TextArea = (props) => {
             border: dark ? "1px solid rgba(255, 255, 255, 0.3)" : "none",
             boxShadow: "0px 2px 5px rgba(0, 0, 0, 0.1)",
             maxWidth: "800px",
+            height: `${inputHeight + 20}px`, // Adjust height dynamically (add padding)
+            transition: "height 0.2s ease-in-out", // Smooth height adjustment
             margin: "5px auto",
             zIndex: 1,
           }}
         >
           {/* Input Field */}
           <textarea
-            className={`custom-textarea ${dark ? "dark-mode" : "light-mode"}`}
+            className={`custom-textarea ${
+              dark ? "dark-mode-scrollbar_chat" : "light-mode-scrollbar_sidebar"
+            }`}
             type="text"
             value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
+            onChange={handleInputChange}
             placeholder="Message TaxGPT"
             style={{
               flex: 1,
@@ -81,9 +129,8 @@ const TextArea = (props) => {
               fontSize: "16px",
               color: dark ? "#FFFFFF" : "#333",
               resize: "none", // Disable manual resizing
-              overflowY: "auto", // Allow vertical scrolling
-              maxHeight: "120px", // Limit the height of the text area
-              minHeight: "40px", // Initial height
+              overflowY: inputHeight === maxHeight ? "auto" : "hidden", // Allow scroll if maxHeight reached
+              height: `${inputHeight}px`, // Dynamic height
               lineHeight: "1.5", // Line spacing
               boxSizing: "border-box",
             }}
@@ -226,7 +273,7 @@ const TextArea = (props) => {
             textAlign: "center",
             marginTop: "1px", // Add spacing from the text area
             fontSize: "12px", // Adjust font size for visibility
-            color: dark ? "#FFFFFF" : "#666", // Subtle text color
+            color: dark ? "#999999" : "#666", // Subtle text color
             padding: "0px 10px", // Add some padding for better appearance
             width: "fit-content", // Fit the content width
             margin: "auto", // Center-align and add spacing from the textarea
