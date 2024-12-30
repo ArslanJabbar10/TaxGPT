@@ -75,6 +75,8 @@ const SecondPage = () => {
           const formattedMessages = data.messages.map((msg) => ({
             sender: msg.sender,
             text: msg.content,
+            file_path: msg.file_path, // Add file path
+            file_type: msg.file_type,
           }));
           setMessages(formattedMessages);
           // Check if messages exist and set newChatClickable to true
@@ -134,7 +136,6 @@ const SecondPage = () => {
   const deleteChat = (index) => {
     setChats((prevChats) => {
       const updatedChats = prevChats.filter((_, i) => i !== index); // Remove chat at the given index
-      console.log("Updated Chats after deletion:", updatedChats); // Log the updated chats
 
       return updatedChats;
     });

@@ -1,5 +1,5 @@
 import faiss
-from flask import Flask, json, request, jsonify, render_template, redirect, url_for, session, make_response
+from flask import Flask, json, request, jsonify, render_template, redirect, url_for, session, make_response, send_from_directory
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 import numpy as np
@@ -7,8 +7,10 @@ from sentence_transformers import SentenceTransformer
 from sqlalchemy import text
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from authlib.integrations.flask_client import OAuth
+# from flask_migrate import Migrate
 from datetime import UTC, datetime
 from api_key import *
+from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 import os
 
@@ -17,11 +19,17 @@ CORS(app, supports_credentials=True, origins=["http://localhost:5173"])
 
 load_dotenv()
 
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'pdf', 'docx', 'pptx', 'txt'}
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.secret_key = os.getenv("SECRET_KEY")
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
+# migrate = Migrate(app, db)
+
 
 # User model
 class User(db.Model):
@@ -48,6 +56,8 @@ class Message(db.Model):
     chat_id = db.Column(db.Integer, db.ForeignKey('chat.id'), nullable=False)
     sender = db.Column(db.String(20), nullable=False)  # 'user' or 'bot'
     content = db.Column(db.Text, nullable=False)
+    file_path = db.Column(db.String(250), nullable=True)  # For file storage
+    file_type = db.Column(db.String(50), nullable=True)   # For file type (e.g., 'image/png')
     created_at = db.Column(db.DateTime, default=datetime.now(UTC))
 
 
@@ -138,6 +148,35 @@ def authorize():
     # Save user_id in session
     session['user_id'] = user.id
     return redirect("http://localhost:5173/chat")  # Redirect to the frontend's chat page
+
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route('/api/upload_file', methods=['POST'])
+def upload_file():
+    if "user_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+
+    file = request.files['file']
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)  # Sanitize filename
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))  # Save the file
+
+        file_path = f"/uploads/{filename}"  # File path for frontend
+        file_type = file.content_type  # e.g., 'image/png', 'application/pdf'
+
+        return jsonify({"file_path": file_path, "file_type": file_type}), 200
+
+    return jsonify({"error": "Invalid file type"}), 400
+
+
+@app.route('/uploads/<path:filename>', methods=['GET'])
+def serve_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 
 @app.route('/api/get_chats', methods=['GET'])
@@ -270,11 +309,13 @@ def get_messages():
                 "id": message.id,
                 "sender": message.sender,
                 "content": message.content,
+                "file_path": message.file_path,  # Include file path
+                "file_type": message.file_type,
                 "created_at": message.created_at
             }
             for message in messages
         ]
-
+        
         return jsonify({"messages": messages_data}), 200
 
     except Exception as e:
@@ -358,8 +399,13 @@ def add_message():
     chat_id = data.get("chat_id")
     sender = data.get("sender")  # 'user'
     content = data.get("content")
-
-    if not chat_id or not sender or not content:
+    file_path = data.get("file_path")  
+    file_type = data.get("file_type") 
+    
+    print(f"send - {file_path}")
+    print(f"send - {file_type}")
+    
+    if not chat_id or not sender or (not content and not file_path):
         return jsonify({"error": "Invalid data"}), 400
 
     try:
@@ -367,41 +413,45 @@ def add_message():
         user_message = Message(
             chat_id=chat_id,
             sender=sender,
-            content=content
+            content=content or "",  # Use empty string if content is None
+            file_path=file_path,    # Save the file name as file_path
+            file_type=file_type,
         )
         db.session.add(user_message)
         db.session.commit()
 
         # Retrieve relevant context using FAISS
-        retrieved_chunks = search_index(content, index, embedding_model, preprocessed_chunks)
-        retrieved_context = " ".join(retrieved_chunks)
+        # retrieved_chunks = search_index(content, index, embedding_model, preprocessed_chunks)
+        # retrieved_context = " ".join(retrieved_chunks)
 
-        # Construct a GPT-Neo prompt with the retrieved context
-        gpt_prompt = f"Context: {retrieved_context}\nQuestion: {content}\nAnswer:"
-        inputs = tokenizer(gpt_prompt, return_tensors="pt", max_length=256, truncation=True, padding=True)
-        outputs = model.generate(
-            inputs.input_ids,
-            attention_mask=inputs.attention_mask,
-            max_new_tokens=50,
-            num_beams=3,
-            early_stopping=True
-        )
-        model_response_content = tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
+        # # Construct a GPT-Neo prompt with the retrieved context
+        # gpt_prompt = f"Context: {retrieved_context}\nQuestion: {content}\nAnswer:"
+        # inputs = tokenizer(gpt_prompt, return_tensors="pt", max_length=256, truncation=True, padding=True)
+        # outputs = model.generate(
+        #     inputs.input_ids,
+        #     attention_mask=inputs.attention_mask,
+        #     max_new_tokens=50,
+        #     num_beams=3,
+        #     early_stopping=True
+        # )
+        # model_response_content = tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
 
         # Add model's response to the database
         model_message = Message(
             chat_id=chat_id,
             sender="model",
-            content=model_response_content
+            content="for test three"
         )
         db.session.add(model_message)
         db.session.commit()
 
-        return jsonify({"model_response": model_response_content}), 200
+        return jsonify({"model_response": "for test three"}), 200
 
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+    
+
 
 
 

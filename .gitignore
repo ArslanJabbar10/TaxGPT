@@ -31,6 +31,8 @@ Backend/.env
 Backend/vector_index.faiss
 Backend/chunks.json
 Backend/api_key.py
+Backend/migrations
+Backend/uploads/
 
 # IDE/Editor Files
 .vscode/

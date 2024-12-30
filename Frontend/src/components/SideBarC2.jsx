@@ -12,9 +12,13 @@ const SideBarC2 = (props) => {
   const [editingIndex, setEditingIndex] = useState(null); // Track which chat is being edited
   const [tempText, setTempText] = useState(""); // Temporary text for editing
   const [hoveredIndex, setHoveredIndex] = useState(null); // Track which chat is hovered
+  const [dropdownPosition, setDropdownPosition] = useState("below");
 
   const toggleDropdown = (index) => {
     setVisibleDropdown(visibleDropdown === index ? null : index);
+    if (visibleDropdown !== index) {
+      determineDropdownPosition(index); // Calculate position when opening dropdown
+    }
   };
 
   const handleMouseEnter = (index) => {
@@ -120,6 +124,24 @@ const SideBarC2 = (props) => {
     saveChanges(index);
   };
 
+  const determineDropdownPosition = (index) => {
+    const chatDiv = document.getElementById(`chat-${index}`); // Ensure unique IDs
+    const dropdownHeight = 150; // Approximate dropdown height
+    const viewportHeight = window.innerHeight;
+    const chatRect = chatDiv.getBoundingClientRect();
+
+    // Calculate available space above and below
+    const spaceAbove = chatRect.top;
+    const spaceBelow = viewportHeight - chatRect.bottom;
+
+    // Set dropdown position based on available space
+    if (spaceBelow < dropdownHeight && spaceAbove > dropdownHeight) {
+      setDropdownPosition("above");
+    } else {
+      setDropdownPosition("below");
+    }
+  };
+
   return (
     <>
       {/* Chat History */}
@@ -133,10 +155,11 @@ const SideBarC2 = (props) => {
           const isActive = chat.id === props.activeChat?.id;
           return (
             <div
+              id={`chat-${index}`}
               key={index}
               style={{
-                padding: "8px",
-                marginBottom: "3px",
+                padding: "7px",
+                margin: "3px 6px",
                 backgroundColor:
                   hoveredIndex === index
                     ? dark
@@ -230,8 +253,9 @@ const SideBarC2 = (props) => {
                   data-bs-theme="light"
                   style={{
                     position: "absolute", // Position it absolutely
-                    top: "100%", // Position below the parent div
-                    right: "20px", // Align with the left edge of the parent
+                    top: dropdownPosition === "below" ? "100%" : "auto",
+                    bottom: dropdownPosition === "above" ? "100%" : "auto",
+                    right: "10px", // Align with the left edge of the parent
                     width: "50px",
                     zIndex: 1000, // Ensure it appears on top
                     backgroundColor: dark
