@@ -2,6 +2,7 @@ import React, { useState, createContext, useEffect } from "react";
 import SideBar from "./SideBar";
 import Navbar2 from "./Navbar2";
 import ChatArea from "./ChatArea";
+import { isToday, isYesterday, isWithinInterval, subDays } from "date-fns";
 
 const ChatClickable = createContext();
 const AddingChat = createContext();
@@ -26,7 +27,13 @@ const SecondPage = () => {
   const [expand_btn, setExpandBtn] = useState(false);
   const [newChatClickable, setClickable] = useState(false);
   const [messages, setMessages] = useState([]);
-  const [chats, setChats] = useState([]); // Sample chat history
+  const [chats, setChats] = useState({
+    today: [],
+    yesterday: [],
+    past7Days: [],
+    past30Days: [],
+    older: [],
+  }); // Sample chat history
   const [activeChat, setActiveChat] = useState(null); // Active chat state
   const [dark, setDark] = useState(false);
 
@@ -40,14 +47,69 @@ const SecondPage = () => {
         });
         const data = await response.json();
         if (response.ok) {
-          const formattedChats = data.map((chat) => ({
-            id: chat.id, // Add chat_id to each chat
-            text: chat.title, // Displayed chat title
-            icon: <ThreeDotsIcon />,
-          }));
-          setChats(formattedChats);
-          if (formattedChats.length > 0) {
-            setActiveChat(formattedChats[formattedChats.length - 1]); // Set latest chat as active
+          // Define chat groups
+          const groupedChats = {
+            today: [],
+            yesterday: [],
+            past7Days: [],
+            past30Days: [],
+            older: [],
+          };
+
+          // Helper dates
+          const today = new Date();
+          const sevenDaysAgo = subDays(today, 7);
+          const thirtyDaysAgo = subDays(today, 30);
+
+          // Group chats based on date
+          data.forEach((chat) => {
+            const chatDate = new Date(chat.created_at);
+            const formattedChat = {
+              id: chat.id,
+              text: chat.title,
+              icon: <ThreeDotsIcon />,
+              created_at: chatDate, // Include date for sorting
+            };
+
+            if (isToday(chatDate)) {
+              groupedChats.today.push(formattedChat);
+            } else if (isYesterday(chatDate)) {
+              groupedChats.yesterday.push(formattedChat);
+            } else if (
+              isWithinInterval(chatDate, { start: sevenDaysAgo, end: today })
+            ) {
+              groupedChats.past7Days.push(formattedChat);
+            } else if (
+              isWithinInterval(chatDate, { start: thirtyDaysAgo, end: today })
+            ) {
+              groupedChats.past30Days.push(formattedChat);
+            } else {
+              groupedChats.older.push(formattedChat);
+            }
+          });
+
+          console.log("Grouped chats:", groupedChats);
+
+          setChats(groupedChats);
+
+          // Determine the most recent chat
+          const allChats = [
+            ...groupedChats.today,
+            ...groupedChats.yesterday,
+            ...groupedChats.past7Days,
+            ...groupedChats.past30Days,
+            ...groupedChats.older,
+          ];
+
+          const mostRecentChat = allChats.reduce((latest, current) => {
+            return !latest || current.created_at > latest.created_at
+              ? current
+              : latest;
+          }, null);
+
+          // Set the latest chat as active
+          if (mostRecentChat) {
+            setActiveChat(mostRecentChat);
           }
         } else {
           console.error("Failed to fetch chats:", data.error);
@@ -102,7 +164,7 @@ const SecondPage = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include", // Include session cookies
-        body: JSON.stringify({ title: `Chat ${chats.length + 1}` }),
+        body: JSON.stringify({ title: "New Chat" }),
       });
 
       const data = await response.json();
@@ -113,7 +175,12 @@ const SecondPage = () => {
           text: data.title,
           icon: <ThreeDotsIcon />,
         };
-        setChats((prevChats) => [...prevChats, newChat]);
+        setChats((prevChats) => {
+          const updatedChats = { ...prevChats }; // Shallow copy of the current grouped chats
+          updatedChats.today = [newChat, ...updatedChats.today]; // Add new chat to the "today" group at the beginning
+          return updatedChats;
+        });
+
         setActiveChat(newChat);
         setMessages([]);
         setClickable(false); // Set to false when a new chat is successfully created
@@ -125,32 +192,55 @@ const SecondPage = () => {
     }
   };
 
-  const updateChatText = (index, newText) => {
+  const updateChatText = (chatId, newText) => {
     setChats((prevChats) => {
-      const updatedChats = [...prevChats]; // Create a shallow copy of the chats
-      updatedChats[index].text = newText; // Update the specific chat's text
-      return updatedChats;
+      if (!prevChats || typeof prevChats !== "object") return prevChats;
+
+      const updatedChats = {};
+
+      for (const [group, chats] of Object.entries(prevChats)) {
+        updatedChats[group] = chats.map((chat) =>
+          chat.id === chatId ? { ...chat, text: newText } : chat
+        );
+      }
+
+      return updatedChats; // Return the updated grouped chats
     });
   };
 
-  const deleteChat = (index) => {
+  const deleteChat = (chatId) => {
     setChats((prevChats) => {
-      const updatedChats = prevChats.filter((_, i) => i !== index); // Remove chat at the given index
+      if (!prevChats || typeof prevChats !== "object") return prevChats;
 
-      return updatedChats;
+      const updatedChats = {};
+
+      for (const [group, chats] of Object.entries(prevChats)) {
+        updatedChats[group] = chats.filter((chat) => chat.id !== chatId);
+      }
+
+      return updatedChats; // Return the updated grouped chats
     });
+
     // Clear activeChat if the deleted chat was active
-    if (chats[index]?.id === activeChat?.id) {
+    if (activeChat?.id === chatId) {
       setActiveChat(null);
     }
   };
 
   const updateChatTitle = (chatId, newTitle) => {
-    setChats((prevChats) =>
-      prevChats.map((chat) =>
-        chat.id === chatId ? { ...chat, text: newTitle } : chat
-      )
-    );
+    setChats((prevChats) => {
+      if (!prevChats || typeof prevChats !== "object") return prevChats;
+
+      const updatedChats = {};
+
+      for (const [group, chats] of Object.entries(prevChats)) {
+        updatedChats[group] = chats.map((chat) =>
+          chat.id === chatId ? { ...chat, text: newTitle } : chat
+        );
+      }
+
+      return updatedChats; // Return the updated grouped chats
+    });
   };
 
   const isPlusClicked = () => {

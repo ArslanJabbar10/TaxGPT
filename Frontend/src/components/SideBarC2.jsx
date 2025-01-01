@@ -43,16 +43,16 @@ const SideBarC2 = (props) => {
     };
   }, []);
 
-  const handleRename = (index) => {
-    const actualIndex = props.chats.length - 1 - index; // Calculate the correct index
-    setEditingIndex(actualIndex); // Enable editing mode for this chat
-    setTempText(props.chats[actualIndex].text); // Set initial text for the input field
+  const handleRename = (chat) => {
+    // const actualIndex = props.chats.length - 1 - index; // Calculate the correct index
+    setEditingIndex(chat.id); // Enable editing mode for this chat
+    setTempText(chat.text); // Set initial text for the input field
     setVisibleDropdown(null); // Close the dropdown
   };
 
-  const handleDelete = async (index) => {
-    const actualIndex = props.chats.length - 1 - index; // Reverse index calculation
-    const chatToDelete = props.chats[actualIndex]; // Get the chat being deleted
+  const handleDelete = async (chat) => {
+    // const actualIndex = props.chats.length - 1 - index; // Reverse index calculation
+    // const chatToDelete = props.chats[actualIndex]; // Get the chat being deleted
 
     try {
       const response = await fetch("http://localhost:5000/api/delete_chat", {
@@ -60,14 +60,14 @@ const SideBarC2 = (props) => {
         headers: { "Content-Type": "application/json" },
         credentials: "include", // Include session cookies
         body: JSON.stringify({
-          chat_id: chatToDelete.id, // Send chat_id to backend
+          chat_id: chat.id, // Send chat_id to backend
         }),
       });
 
       const data = await response.json();
       if (response.ok) {
         console.log("Chat deleted successfully:", data.message);
-        props.deleteChat(actualIndex); // Update the frontend state
+        props.deleteChat(chat.id); // Update the frontend state
       } else {
         console.error("Error deleting chat:", data.error);
       }
@@ -78,9 +78,9 @@ const SideBarC2 = (props) => {
     setVisibleDropdown(null); // Close the dropdown
   };
 
-  const saveChanges = async (index) => {
+  const saveChanges = async (chat) => {
     if (tempText.trim()) {
-      const chatToUpdate = props.chats[index]; // Get the chat being renamed
+      // const chatToUpdate = props.chats[index]; // Get the chat being renamed
       try {
         const response = await fetch(
           "http://localhost:5000/api/update_chat_title",
@@ -89,7 +89,7 @@ const SideBarC2 = (props) => {
             headers: { "Content-Type": "application/json" },
             credentials: "include", // Include session cookies
             body: JSON.stringify({
-              chat_id: chatToUpdate.id, // Send the chat_id
+              chat_id: chat.id, // Send the chat_id
               new_title: tempText.trim(), // Send the new title
             }),
           }
@@ -97,7 +97,7 @@ const SideBarC2 = (props) => {
 
         const data = await response.json();
         if (response.ok) {
-          props.updateChatText(index, data.new_title); // Update the frontend chat title
+          props.updateChatText(chat.id, data.new_title); // Update the frontend chat title
           setEditingIndex(null); // Exit editing mode
         } else {
           console.error("Error updating chat title:", data.error);
@@ -109,9 +109,10 @@ const SideBarC2 = (props) => {
   };
 
   const handleChatClick = (index) => {
-    const actualIndex = props.chats.length - 1 - index; // Reverse index
-    const selectedChat = props.chats[actualIndex];
-    props.setActiveChat(selectedChat); // Set active chat
+    console.log(index);
+    // const actualIndex = props.chats.length - 1 - index; // Reverse index
+    // const selectedChat = props.chats[actualIndex];
+    props.setActiveChat(index); // Set active chat
   };
 
   const handleKeyDown = (event, index) => {
@@ -141,27 +142,32 @@ const SideBarC2 = (props) => {
       setDropdownPosition("below");
     }
   };
+  const renderGroupedChats = (groupName, chats) => {
+    if (chats.length === 0) return null;
 
-  return (
-    <>
-      {/* Chat History */}
-      <div
-        className={`custom-textarea ${
-          dark ? "dark-mode-scrollbar_sidebar" : "light-mode-scrollbar_sidebar"
-        }`}
-        style={{ flexGrow: 1, overflowY: "auto", marginBottom: "10px" }}
-      >
-        {[...props.chats].reverse().map((chat, index) => {
+    return (
+      <>
+        <div
+          style={{
+            padding: "5px 10px",
+            fontWeight: "bold",
+            color: dark ? "#FFFFFF" : "#333",
+            fontSize: "14px",
+          }}
+        >
+          {groupName}
+        </div>
+        {chats.map((chat) => {
           const isActive = chat.id === props.activeChat?.id;
           return (
             <div
-              id={`chat-${index}`}
-              key={index}
+              id={`chat-${chat.id}`}
+              key={chat.id}
               style={{
                 padding: "7px",
                 margin: "3px 6px",
                 backgroundColor:
-                  hoveredIndex === index
+                  hoveredIndex === chat.id
                     ? dark
                       ? "var(--light-dark-hover-color)" // Dark mode hover color
                       : "var(--hover-bg-color)" // Light mode hover color
@@ -187,20 +193,18 @@ const SideBarC2 = (props) => {
                 justifyContent: "space-between",
                 alignItems: "center",
               }}
-              onClick={() => handleChatClick(index)} // Set this chat as active
-              onMouseEnter={() => handleMouseEnter(index)} // Track hovered chat
+              onClick={() => handleChatClick(chat)} // Set this chat as active
+              onMouseEnter={() => handleMouseEnter(chat.id)} // Track hovered chat
               onMouseLeave={handleMouseLeave} // Reset hovered chat
             >
               {/* Editable or Static Text */}
-              {editingIndex === props.chats.length - 1 - index ? (
+              {editingIndex === chat.id ? (
                 <input
                   type="text"
                   value={tempText}
                   onChange={(e) => setTempText(e.target.value)}
-                  onKeyDown={(e) =>
-                    handleKeyDown(props.chats.length - 1 - index)
-                  } // Save on Enter
-                  onBlur={() => handleBlur(props.chats.length - 1 - index)} // Save on Blur
+                  onKeyDown={(e) => handleKeyDown(e, chat)} // Save on Enter
+                  onBlur={() => handleBlur(chat)} // Save on Blur
                   style={{
                     flex: 1,
                     border: "1px solid #ddd",
@@ -212,7 +216,7 @@ const SideBarC2 = (props) => {
                 />
               ) : (
                 <span
-                  onClick={() => handleChatClick(index)}
+                  onClick={() => handleChatClick(chat.id)}
                   style={{
                     flex: 1,
                     textAlign: "left",
@@ -231,7 +235,7 @@ const SideBarC2 = (props) => {
                 </span>
               )}
               {/* Conditionally Render Icon */}
-              {hoveredIndex === index && (
+              {hoveredIndex === chat.id && (
                 <span
                   style={{
                     cursor: "pointer",
@@ -240,13 +244,13 @@ const SideBarC2 = (props) => {
                   }}
                   onClick={(e) => {
                     e.stopPropagation(); // Prevent triggering chat click
-                    toggleDropdown(index); // Toggle dropdown visibility for this chat
+                    toggleDropdown(chat.id); // Toggle dropdown visibility for this chat
                   }}
                 >
                   {chat.icon}
                 </span>
               )}
-              {visibleDropdown === index && (
+              {visibleDropdown === chat.id && (
                 <ul
                   ref={dropdownRef}
                   className="dropdown-menu d-block shadow"
@@ -284,7 +288,7 @@ const SideBarC2 = (props) => {
                     <a
                       className="dropdown-item d-flex gap-2 align-items-center"
                       href="#"
-                      onClick={() => handleRename(index)} // Trigger rename mode
+                      onClick={() => handleRename(chat)} // Trigger rename mode
                       style={{
                         outline: "none",
                         backgroundColor: "transparent",
@@ -324,7 +328,7 @@ const SideBarC2 = (props) => {
                     <a
                       className="dropdown-item d-flex gap-2 align-items-center"
                       href="#"
-                      onClick={() => handleDelete(index)} // Trigger delete on click
+                      onClick={() => handleDelete(chat)} // Trigger delete on click
                       style={{
                         outline: "none",
                         backgroundColor: "transparent",
@@ -354,8 +358,23 @@ const SideBarC2 = (props) => {
             </div>
           );
         })}
-      </div>
-    </>
+      </>
+    );
+  };
+
+  return (
+    <div
+      className={`custom-textarea ${
+        dark ? "dark-mode-scrollbar_sidebar" : "light-mode-scrollbar_sidebar"
+      }`}
+      style={{ flexGrow: 1, overflowY: "auto", marginBottom: "10px" }}
+    >
+      {renderGroupedChats("Today", props.chats.today)}
+      {renderGroupedChats("Yesterday", props.chats.yesterday)}
+      {renderGroupedChats("Last 7 Days", props.chats.past7Days)}
+      {renderGroupedChats("Last 30 Days", props.chats.past30Days)}
+      {renderGroupedChats("Older", props.chats.older)}
+    </div>
   );
 };
 
