@@ -46,8 +46,8 @@ const SecondPage = () => {
           credentials: "include",
         });
         const data = await response.json();
+
         if (response.ok) {
-          // Define chat groups
           const groupedChats = {
             today: [],
             yesterday: [],
@@ -56,60 +56,86 @@ const SecondPage = () => {
             older: [],
           };
 
-          // Helper dates
           const today = new Date();
           const sevenDaysAgo = subDays(today, 7);
           const thirtyDaysAgo = subDays(today, 30);
 
-          // Group chats based on date
           data.forEach((chat) => {
             const chatDate = new Date(chat.created_at);
             const formattedChat = {
               id: chat.id,
+              hash_id: chat.hash_id, // Include hash_id
               text: chat.title,
               icon: <ThreeDotsIcon />,
-              created_at: chatDate, // Include date for sorting
+              created_at: chatDate,
             };
 
             if (isToday(chatDate)) {
-              groupedChats.today.push(formattedChat);
+              groupedChats.today.unshift(formattedChat);
             } else if (isYesterday(chatDate)) {
-              groupedChats.yesterday.push(formattedChat);
+              groupedChats.yesterday.unshift(formattedChat);
             } else if (
               isWithinInterval(chatDate, { start: sevenDaysAgo, end: today })
             ) {
-              groupedChats.past7Days.push(formattedChat);
+              groupedChats.past7Days.unshift(formattedChat);
             } else if (
               isWithinInterval(chatDate, { start: thirtyDaysAgo, end: today })
             ) {
-              groupedChats.past30Days.push(formattedChat);
+              groupedChats.past30Days.unshift(formattedChat);
             } else {
-              groupedChats.older.push(formattedChat);
+              groupedChats.older.unshift(formattedChat);
             }
           });
 
-          console.log("Grouped chats:", groupedChats);
-
           setChats(groupedChats);
 
-          // Determine the most recent chat
-          const allChats = [
-            ...groupedChats.today,
-            ...groupedChats.yesterday,
-            ...groupedChats.past7Days,
-            ...groupedChats.past30Days,
-            ...groupedChats.older,
-          ];
+          // Check the current URL for a hash_id
+          const currentHashId = window.location.pathname.split("/chat/")[1];
 
-          const mostRecentChat = allChats.reduce((latest, current) => {
-            return !latest || current.created_at > latest.created_at
-              ? current
-              : latest;
-          }, null);
+          if (currentHashId) {
+            // Find the chat matching the hash_id
+            const allChats = [
+              ...groupedChats.today,
+              ...groupedChats.yesterday,
+              ...groupedChats.past7Days,
+              ...groupedChats.past30Days,
+              ...groupedChats.older,
+            ];
 
-          // Set the latest chat as active
-          if (mostRecentChat) {
-            setActiveChat(mostRecentChat);
+            const matchingChat = allChats.find(
+              (chat) => chat.hash_id === currentHashId
+            );
+
+            if (matchingChat) {
+              setActiveChat(matchingChat);
+            } else {
+              console.error("Chat not found for hash_id:", currentHashId);
+            }
+          } else {
+            // Set the latest chat as active if no hash_id is in the URL
+            const allChats = [
+              ...groupedChats.today,
+              ...groupedChats.yesterday,
+              ...groupedChats.past7Days,
+              ...groupedChats.past30Days,
+              ...groupedChats.older,
+            ];
+
+            const mostRecentChat = allChats.reduce((latest, current) => {
+              return !latest || current.created_at > latest.created_at
+                ? current
+                : latest;
+            }, null);
+
+            if (mostRecentChat) {
+              setActiveChat(mostRecentChat);
+              // Update the URL to include the hash_id of the latest chat
+              window.history.pushState(
+                {},
+                "",
+                `/chat/${mostRecentChat.hash_id}`
+              );
+            }
           }
         } else {
           console.error("Failed to fetch chats:", data.error);
@@ -133,13 +159,24 @@ const SecondPage = () => {
           { method: "GET", credentials: "include" }
         );
         const data = await response.json();
+        console.log("Raw messages from backend:", data.messages);
         if (response.ok) {
-          const formattedMessages = data.messages.map((msg) => ({
-            sender: msg.sender,
-            text: msg.content,
-            file_path: msg.file_path, // Add file path
-            file_type: msg.file_type,
-          }));
+          const formattedMessages = data.messages
+            .map((msg) => ({
+              id: msg.id,
+              sender: msg.sender,
+              text: msg.content,
+              file_path: msg.file_path,
+              file_type: msg.file_type,
+              created_at: new Date(msg.created_at), // Parse created_at to Date object
+            }))
+            .sort(
+              (a, b) =>
+                a.created_at.getTime() === b.created_at.getTime()
+                  ? a.id - b.id // Use id to break ties when created_at is the same
+                  : a.created_at - b.created_at // Sort by created_at
+            ); // Sort by created_at ascending
+          console.log("Formatted and sorted messages:", formattedMessages);
           setMessages(formattedMessages);
           // Check if messages exist and set newChatClickable to true
           if (formattedMessages.length > 0) {
@@ -172,8 +209,10 @@ const SecondPage = () => {
       if (response.ok) {
         const newChat = {
           id: data.chat_id,
+          hash_id: data.hash_id,
           text: data.title,
           icon: <ThreeDotsIcon />,
+          created_at: new Date(data.created_at),
         };
         setChats((prevChats) => {
           const updatedChats = { ...prevChats }; // Shallow copy of the current grouped chats
@@ -182,6 +221,7 @@ const SecondPage = () => {
         });
 
         setActiveChat(newChat);
+        window.history.pushState({}, "", `/chat/${newChat.hash_id}`);
         setMessages([]);
         setClickable(false); // Set to false when a new chat is successfully created
       } else {
@@ -263,7 +303,9 @@ const SecondPage = () => {
 
   return (
     <>
-      <ChatClickable.Provider value={{ newChatClickable, changingClickable }}>
+      <ChatClickable.Provider
+        value={{ newChatClickable, setClickable, changingClickable }}
+      >
         <AddingChat.Provider
           value={{ addNewChat, chats, updateChatText, deleteChat }}
         >

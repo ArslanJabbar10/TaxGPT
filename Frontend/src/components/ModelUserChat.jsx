@@ -11,7 +11,7 @@ const ModelUserChat = (props) => {
   const [userName, setUserName] = useState();
   const { dark } = useContext(DarkMode);
   const [hoverState, setHoverState] = useState({}); // Object to track hover states
-
+  console.log(props.messages);
   const handleMouseEnter = (id, action) => {
     setHoverState((prev) => ({ ...prev, [`${id}-${action}`]: true }));
   };

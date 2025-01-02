@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
+import { ChatClickable } from "./SecondPage";
 import { DarkMode } from "./SecondPage";
 
 import "./all.css";
@@ -8,12 +9,12 @@ const SideBarC2 = (props) => {
   const [hoverD, setHoverD] = useState(false);
   const { dark } = useContext(DarkMode);
   const [visibleDropdown, setVisibleDropdown] = useState(null);
+  const { setClickable } = useContext(ChatClickable);
   const dropdownRef = useRef(null); // Reference to detect clicks outside
   const [editingIndex, setEditingIndex] = useState(null); // Track which chat is being edited
   const [tempText, setTempText] = useState(""); // Temporary text for editing
   const [hoveredIndex, setHoveredIndex] = useState(null); // Track which chat is hovered
   const [dropdownPosition, setDropdownPosition] = useState("below");
-
   const toggleDropdown = (index) => {
     setVisibleDropdown(visibleDropdown === index ? null : index);
     if (visibleDropdown !== index) {
@@ -53,7 +54,7 @@ const SideBarC2 = (props) => {
   const handleDelete = async (chat) => {
     // const actualIndex = props.chats.length - 1 - index; // Reverse index calculation
     // const chatToDelete = props.chats[actualIndex]; // Get the chat being deleted
-
+    setClickable(false);
     try {
       const response = await fetch("http://localhost:5000/api/delete_chat", {
         method: "DELETE",
@@ -68,6 +69,11 @@ const SideBarC2 = (props) => {
       if (response.ok) {
         console.log("Chat deleted successfully:", data.message);
         props.deleteChat(chat.id); // Update the frontend state
+        // If the deleted chat was active, clear the URL and active chat
+        if (props.activeChat?.id === chat.id) {
+          props.setActiveChat(null); // Clear active chat
+          window.history.pushState({}, "", "/chat/null"); // Update the URL
+        }
       } else {
         console.error("Error deleting chat:", data.error);
       }
@@ -108,11 +114,9 @@ const SideBarC2 = (props) => {
     }
   };
 
-  const handleChatClick = (index) => {
-    console.log(index);
-    // const actualIndex = props.chats.length - 1 - index; // Reverse index
-    // const selectedChat = props.chats[actualIndex];
-    props.setActiveChat(index); // Set active chat
+  const handleChatClick = (chat) => {
+    props.setActiveChat(chat); // Set active chat
+    window.history.pushState({}, "", `/chat/${chat.hash_id}`);
   };
 
   const handleKeyDown = (event, index) => {
@@ -127,7 +131,7 @@ const SideBarC2 = (props) => {
 
   const determineDropdownPosition = (index) => {
     const chatDiv = document.getElementById(`chat-${index}`); // Ensure unique IDs
-    const dropdownHeight = 150; // Approximate dropdown height
+    const dropdownHeight = 200; // Approximate dropdown height
     const viewportHeight = window.innerHeight;
     const chatRect = chatDiv.getBoundingClientRect();
 
@@ -216,7 +220,7 @@ const SideBarC2 = (props) => {
                 />
               ) : (
                 <span
-                  onClick={() => handleChatClick(chat.id)}
+                  onClick={() => handleChatClick(chat)}
                   style={{
                     flex: 1,
                     textAlign: "left",

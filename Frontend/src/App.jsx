@@ -10,7 +10,7 @@ const router = createBrowserRouter([
     element: <FirstPage />,
   },
   {
-    path: "/chat",
+    path: "/chat/:hashId",
     element: <SecondPage />,
   },
 ]);

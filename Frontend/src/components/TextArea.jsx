@@ -74,6 +74,7 @@ const TextArea = (props) => {
       // Step 3: Add model (bot) response if the backend responds
       if (response.ok) {
         props.onSendMessage({ sender: "model", text: data.model_response });
+        //console.log(props.messages);
         if (isFirstMessage) {
           const titleResponse = await fetch(
             "http://localhost:5000/api/generate_title",

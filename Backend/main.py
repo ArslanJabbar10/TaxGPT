@@ -1,13 +1,14 @@
+import uuid
 import faiss
 from flask import Flask, json, request, jsonify, render_template, redirect, url_for, session, make_response, send_from_directory
 from flask_cors import CORS
+# from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 import numpy as np
 from sentence_transformers import SentenceTransformer
 from sqlalchemy import text
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from authlib.integrations.flask_client import OAuth
-# from flask_migrate import Migrate
 from datetime import UTC, datetime
 from api_key import *
 from werkzeug.utils import secure_filename
@@ -47,6 +48,7 @@ class Chat(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     title = db.Column(db.String(120), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.now(UTC))
+    hash_id = db.Column(db.String(36), default=lambda: str(uuid.uuid4()))  
 
     # One-to-many relationship: Chat -> Messages
     messages = db.relationship('Message', backref='chat', lazy=True)
@@ -138,16 +140,24 @@ def authorize():
         db.session.add(user)
         db.session.commit()
         
-    # Check if the user has a default chat; if not, create one
-    default_chat = Chat.query.filter_by(user_id=user.id, title="Chat 1").first()
-    if not default_chat:
-        new_chat = Chat(user_id=user.id, title="Chat 1")
-        db.session.add(new_chat)
+    # Check for the latest chat
+    latest_chat = (
+        Chat.query.filter_by(user_id=user.id)
+        .order_by(Chat.created_at.desc())
+        .first()
+    )
+
+    # If no chats exist, create a new one
+    if not latest_chat:
+        latest_chat = Chat(user_id=user.id, title="New Chat")
+        db.session.add(latest_chat)
         db.session.commit()
-    
+
     # Save user_id in session
     session['user_id'] = user.id
-    return redirect("http://localhost:5173/chat")  # Redirect to the frontend's chat page
+
+    # Redirect to the latest chat
+    return redirect(f"http://localhost:5173/chat/{latest_chat.hash_id}")  # Redirect to the frontend's chat page
 
 
 def allowed_file(filename):
@@ -187,7 +197,7 @@ def get_chats():
     user_id = session["user_id"]
     chats = Chat.query.filter_by(user_id=user_id).order_by(Chat.created_at).all()
     
-    chat_list = [{"id": chat.id, "title": chat.title, "created_at": chat.created_at} for chat in chats]
+    chat_list = [{"id": chat.id, "title": chat.title, "created_at": chat.created_at.isoformat(), "hash_id": chat.hash_id} for chat in chats]
     return jsonify(chat_list)
 
 
@@ -205,7 +215,7 @@ def get_user_info():
         "name": user.name,
         "email": user.email,
         "profile_picture": user.profile_picture,
-        "created_at": user.created_at
+        "created_at": user.created_at.isoformat()
     })
     
 
@@ -254,8 +264,9 @@ def new_chat():
         # Return the chat id and title
         return jsonify({
             "chat_id": new_chat.id,
+            "hash_id": new_chat.hash_id,
             "title": new_chat.title,
-            "created_at": new_chat.created_at
+            "created_at": new_chat.created_at.isoformat()
         }), 201
 
     except Exception as e:
@@ -311,7 +322,7 @@ def get_messages():
                 "content": message.content,
                 "file_path": message.file_path,  # Include file path
                 "file_type": message.file_type,
-                "created_at": message.created_at
+                "created_at": message.created_at.isoformat(),
             }
             for message in messages
         ]
@@ -420,7 +431,7 @@ def add_message():
         db.session.add(user_message)
         db.session.commit()
 
-        # Retrieve relevant context using FAISS
+        ##Retrieve relevant context using FAISS
         # retrieved_chunks = search_index(content, index, embedding_model, preprocessed_chunks)
         # retrieved_context = " ".join(retrieved_chunks)
 
@@ -436,16 +447,16 @@ def add_message():
         # )
         # model_response_content = tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
 
-        # Add model's response to the database
+        ##Add model's response to the database
         model_message = Message(
             chat_id=chat_id,
             sender="model",
-            content="for test three"
+            content="This is model response"
         )
         db.session.add(model_message)
         db.session.commit()
 
-        return jsonify({"model_response": "for test three"}), 200
+        return jsonify({"model_response": "This is model response"}), 200
 
     except Exception as e:
         db.session.rollback()
