@@ -135,7 +135,7 @@ def authorize():
         user = User(
             email=user_info['email'],
             name=user_info['name'],
-            profile_picture=user_info.get('picture')
+            profile_picture=user_info['picture']
         )
         db.session.add(user)
         db.session.commit()
@@ -143,7 +143,7 @@ def authorize():
     # Check for the latest chat
     latest_chat = (
         Chat.query.filter_by(user_id=user.id)
-        .order_by(Chat.created_at.desc())
+        .order_by(Chat.id.desc())
         .first()
     )
 
@@ -451,12 +451,12 @@ def add_message():
         model_message = Message(
             chat_id=chat_id,
             sender="model",
-            content="This is model response"
+            content="It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout."
         )
         db.session.add(model_message)
         db.session.commit()
 
-        return jsonify({"model_response": "This is model response"}), 200
+        return jsonify({"model_response": "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout."}), 200
 
     except Exception as e:
         db.session.rollback()

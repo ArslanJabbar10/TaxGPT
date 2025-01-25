@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useContext } from "react";
 import model from "../assets/model.svg";
 import { ChatClickable } from "./SecondPage";
 import { DarkMode } from "./SecondPage";
+import { DynamicRender } from "./ChatArea";
 import "./all.css";
 
 const ModelUserChat = (props) => {
@@ -10,6 +11,8 @@ const ModelUserChat = (props) => {
   const [profilePicture, setProfilePicture] = useState(null);
   const [userName, setUserName] = useState();
   const { dark } = useContext(DarkMode);
+  const { setRunTime, runTimeResponse, stopped, setStopped } =
+    useContext(DynamicRender);
   const [hoverState, setHoverState] = useState({}); // Object to track hover states
   console.log(props.messages);
   const handleMouseEnter = (id, action) => {
@@ -31,6 +34,18 @@ const ModelUserChat = (props) => {
     }));
   };
 
+  // const [isLatestResponseDynamic, setIsLatestResponseDynamic] = useState(false);
+  // useEffect(() => {
+  //   if (
+  //     props.messages.length > 0 &&
+  //     props.messages[props.messages.length - 1]?.sender === "model"
+  //   ) {
+  //     setIsLatestResponseDynamic(true);
+  //   } else {
+  //     setIsLatestResponseDynamic(false);
+  //   }
+  // }, [props.messages]);
+
   // Fetch user info on component mount
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -43,6 +58,7 @@ const ModelUserChat = (props) => {
         if (response.ok) {
           setProfilePicture(data.profile_picture);
           setUserName(data.name);
+          console.log(data.profilePicture);
         } else {
           console.error("Failed to fetch user info:", data.error);
         }
@@ -50,7 +66,7 @@ const ModelUserChat = (props) => {
         console.error("Error fetching user info:", error);
       }
     };
-
+    console.log("pic");
     fetchUserInfo();
   }, []);
 
@@ -279,7 +295,18 @@ const ModelUserChat = (props) => {
                     textAlign: "left",
                   }}
                 >
-                  {message.text}
+                  {runTimeResponse &&
+                  message.sender === "model" &&
+                  index === props.messages.length - 1 ? (
+                    <DynamicTextRender
+                      text={message.text}
+                      setRunTime={setRunTime}
+                      stopped={stopped}
+                      setStopped={setStopped}
+                    />
+                  ) : (
+                    message.text
+                  )}
                   {/* SVG Actions Row (only for model messages) */}
                   {message.sender === "model" && (
                     <div
@@ -426,6 +453,44 @@ const ModelUserChat = (props) => {
       </div>
     </div>
   );
+};
+
+// DynamicTextRender Component
+const DynamicTextRender = ({ text, setRunTime, stopped, setStopped }) => {
+  const [renderedText, setRenderedText] = useState(""); // Tracks the currently rendered text
+  const indexRef = useRef(0); // Ref to track the current position in the text
+  const intervalRef = useRef(null); // Ref to store the interval ID
+
+  useEffect(() => {
+    if (!text) return; // If there's no text, exit early
+
+    if (!stopped) {
+      // Start rendering text only if not stopped
+      intervalRef.current = setInterval(() => {
+        if (indexRef.current < text.length) {
+          const currentText = text.slice(0, indexRef.current + 1); // Take substring up to the current index
+          setRenderedText(currentText); // Update the rendered text
+          indexRef.current++; // Increment index
+        } else {
+          clearInterval(intervalRef.current); // Stop when all characters are rendered
+          setRunTime(false);
+        }
+      }, 50); // Adjust speed as needed
+    }
+
+    return () => clearInterval(intervalRef.current); // Cleanup interval on unmount or dependency change
+  }, [text, stopped, setRunTime]);
+
+  useEffect(() => {
+    if (stopped) {
+      // Immediately halt rendering when stopped is true
+      clearInterval(intervalRef.current);
+      setRunTime(false);
+      setStopped(false);
+    }
+  }, [stopped]);
+  console.log(renderedText);
+  return <span>{renderedText}</span>;
 };
 
 export default ModelUserChat;

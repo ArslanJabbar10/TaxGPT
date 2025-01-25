@@ -71,8 +71,35 @@ const SideBarC2 = (props) => {
         props.deleteChat(chat.id); // Update the frontend state
         // If the deleted chat was active, clear the URL and active chat
         if (props.activeChat?.id === chat.id) {
-          props.setActiveChat(null); // Clear active chat
-          window.history.pushState({}, "", "/chat/null"); // Update the URL
+          const allChats = [
+            ...props.chats.today,
+            ...props.chats.yesterday,
+            ...props.chats.past7Days,
+            ...props.chats.past30Days,
+            ...props.chats.older,
+          ];
+          console.log("yes");
+          // Filter out the deleted chat
+          const remainingChats = allChats.filter((c) => c.id !== chat.id);
+
+          // Find the chat with the highest id in the remaining chats
+          const nextChatWithHighestId = remainingChats.reduce(
+            (highest, current) => {
+              return current.id > (highest?.id || 0) ? current : highest;
+            },
+            null
+          );
+          console.log(nextChatWithHighestId);
+          if (nextChatWithHighestId) {
+            props.setActiveChat(nextChatWithHighestId); // Set the chat with the highest id as the active chat
+            window.history.pushState(
+              {},
+              "",
+              `/chat/${nextChatWithHighestId.hash_id}`
+            ); // Update the URL
+          } else {
+            console.warn("No chats available in any category."); // Optional: Handle empty chats case
+          }
         }
       } else {
         console.error("Error deleting chat:", data.error);
@@ -157,6 +184,7 @@ const SideBarC2 = (props) => {
             fontWeight: "bold",
             color: dark ? "#FFFFFF" : "#333",
             fontSize: "14px",
+            marginTop: "20px",
           }}
         >
           {groupName}
@@ -346,7 +374,7 @@ const SideBarC2 = (props) => {
                           xmlns="http://www.w3.org/2000/svg"
                           width="16"
                           height="16"
-                          fill={dark ? "#FFFFFF" : "#000000"}
+                          fill={"#ff1b00"}
                           className="bi bi-trash3"
                           viewBox="0 0 16 16"
                         >
@@ -354,7 +382,9 @@ const SideBarC2 = (props) => {
                         </svg>
                       </div>
 
-                      <div style={{ marginLeft: "10px" }}>Delete</div>
+                      <div style={{ marginLeft: "10px", color: "#ff1b00" }}>
+                        Delete
+                      </div>
                     </a>
                   </li>
                 </ul>

@@ -90,7 +90,7 @@ const SideBarC1 = (props) => {
               ? "#5d5d5d" //
               : "#666", // Muted text when disabled
             padding: "10px",
-            marginBottom: "30px",
+            marginBottom: "10px",
             marginTop: "30px",
             border: "none",
             borderRadius: "30px",

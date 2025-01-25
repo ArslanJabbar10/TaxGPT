@@ -1,6 +1,7 @@
 import React, { useState, useContext, useRef } from "react";
 import { ChatClickable } from "./SecondPage";
 import { DarkMode } from "./SecondPage";
+import { DynamicRender } from "./ChatArea";
 import "./all.css";
 
 const TextArea = (props) => {
@@ -8,6 +9,7 @@ const TextArea = (props) => {
   const [hoverM, setHoverM] = useState(false);
   const [hoverS, setHoverS] = useState(false);
   const { dark } = useContext(DarkMode);
+  const { runTimeResponse, setRunTime, setStopped } = useContext(DynamicRender);
 
   const [inputValue, setInputValue] = useState(""); // State for user input
   const [filePath, setFilePath] = useState("");
@@ -45,6 +47,7 @@ const TextArea = (props) => {
     if ((inputValue.trim() === "" && preview === null) || !props.activeChat)
       return;
     try {
+      setRunTime(true);
       // Prepare the payload for the backend
       const payload = {
         chat_id: props.activeChat.id,
@@ -107,6 +110,11 @@ const TextArea = (props) => {
     changingClickable(); // Any additional logic
     setFilePath(null);
     setFileType(null);
+  };
+
+  const stopRendering = () => {
+    console.log("stopped-true");
+    setStopped(true);
   };
 
   const handleVoiceInput = () => {
@@ -458,142 +466,161 @@ const TextArea = (props) => {
 
             {/* Icons */}
             <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
-              {/* Gallery Icon */}
-              <div
-                onMouseEnter={() => setHoverG(true)}
-                onMouseLeave={() => setHoverG(false)}
-                onClick={() => document.getElementById("file-upload").click()} // Trigger file input click
-                style={{
-                  background: hoverG
-                    ? dark
-                      ? "var(--light-dark-bg-color)"
-                      : "#d0d3d4"
-                    : dark
-                    ? "none"
-                    : "none",
-                  border: "none",
-                  height: "40px",
-                  width: "40px",
-                  borderRadius: "50%",
-                  cursor: "pointer",
-                  transition: "background 0.2s, color 0.2s",
-                }}
-              >
-                <svg
-                  style={{
-                    width: "20px",
-                    height: "20px",
-                    cursor: "pointer",
-                    position: "relative",
-                    top: "6px",
-                    left: "10px",
-                  }}
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  fill={dark ? "#FFFFFF" : "#000000"}
-                  className="bi bi-image"
-                  viewBox="0 0 16 16"
-                >
-                  <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0" />
-                  <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1z" />
-                </svg>
-              </div>
-              {/* Hidden File Input */}
-              <input
-                id="file-upload"
-                type="file"
-                ref={fileInputRef}
-                style={{ display: "none" }}
-                onChange={(e) => handleFileUpload(e)}
-              />
-
-              {/* Microphone Icon */}
-              <div
-                onClick={handleVoiceInput} // Add voice functionality
-                onMouseEnter={() => setHoverM(true)}
-                onMouseLeave={() => setHoverM(false)}
-                style={{
-                  background: hoverM
-                    ? dark
-                      ? "var(--light-dark-bg-color)"
-                      : "#d0d3d4"
-                    : dark
-                    ? "none"
-                    : "none",
-                  border: "none",
-                  height: "40px",
-                  width: "40px",
-                  borderRadius: "50%",
-                  cursor: "pointer",
-                  transition: "background 0.2s, color 0.2s",
-                }}
-              >
-                <svg
-                  style={{
-                    width: "20px",
-                    height: "20px",
-                    cursor: "pointer",
-                    position: "relative",
-                    top: "6px",
-                    left: "10px",
-                  }}
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  fill={dark ? "#FFFFFF" : "#000000"}
-                  className="bi bi-mic"
-                  viewBox="0 0 16 16"
-                >
-                  <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5" />
-                  <path d="M10 8a2 2 0 1 1-4 0V3a2 2 0 1 1 4 0zM8 0a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V3a3 3 0 0 0-3-3" />
-                </svg>
-              </div>
-
-              {/* Send Icon */}
-              {(inputValue.trim() || preview) && (
-                <div
-                  onMouseEnter={() => setHoverS(true)}
-                  onMouseLeave={() => setHoverS(false)}
-                  style={{
-                    background: hoverS
-                      ? dark
-                        ? "var(--light-dark-bg-color)"
-                        : "#d0d3d4"
-                      : dark
-                      ? "none"
-                      : "none",
-                    border: "none",
-                    height: "40px",
-                    width: "40px",
-                    borderRadius: "50%",
-                    cursor: "pointer",
-                    transition: "background 0.2s, color 0.2s",
-                  }}
-                >
+              {runTimeResponse ? (
+                <div onClick={stopRendering} style={{ cursor: "pointer" }}>
                   <svg
-                    onClick={() => {
-                      handleSend();
-                      changingClickable();
-                    }}
-                    style={{
-                      width: "20px",
-                      height: "20px",
-                      cursor: "pointer",
-                      position: "relative",
-                      top: "6px",
-                      left: "10px",
-                    }}
                     xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    fill={dark ? "#FFFFFF" : "#000000"}
-                    className="bi bi-send"
+                    width="30"
+                    height="30"
+                    fillRule="currentColor"
+                    className="bi bi-stop-circle"
                     viewBox="0 0 16 16"
                   >
-                    <path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995L.643 7.184a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11ZM6.636 10.07l2.761 4.338L14.13 2.576zm6.787-8.201L1.591 6.602l4.339 2.76z" />
+                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16" />
+                    <path d="M5 6.5A1.5 1.5 0 0 1 6.5 5h3A1.5 1.5 0 0 1 11 6.5v3A1.5 1.5 0 0 1 9.5 11h-3A1.5 1.5 0 0 1 5 9.5z" />
                   </svg>
                 </div>
+              ) : (
+                <>
+                  <div
+                    onMouseEnter={() => setHoverG(true)}
+                    onMouseLeave={() => setHoverG(false)}
+                    onClick={() =>
+                      document.getElementById("file-upload").click()
+                    } // Trigger file input click
+                    style={{
+                      background: hoverG
+                        ? dark
+                          ? "var(--light-dark-bg-color)"
+                          : "#d0d3d4"
+                        : dark
+                        ? "none"
+                        : "none",
+                      border: "none",
+                      height: "40px",
+                      width: "40px",
+                      borderRadius: "50%",
+                      cursor: "pointer",
+                      transition: "background 0.2s, color 0.2s",
+                    }}
+                  >
+                    <svg
+                      style={{
+                        width: "20px",
+                        height: "20px",
+                        cursor: "pointer",
+                        position: "relative",
+                        top: "6px",
+                        left: "10px",
+                      }}
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      fill={dark ? "#FFFFFF" : "#000000"}
+                      className="bi bi-image"
+                      viewBox="0 0 16 16"
+                    >
+                      <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0" />
+                      <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1z" />
+                    </svg>
+                  </div>
+                  {/* Hidden File Input */}
+                  <input
+                    id="file-upload"
+                    type="file"
+                    ref={fileInputRef}
+                    style={{ display: "none" }}
+                    onChange={(e) => handleFileUpload(e)}
+                  />
+
+                  {/* Microphone Icon */}
+                  <div
+                    onClick={handleVoiceInput} // Add voice functionality
+                    onMouseEnter={() => setHoverM(true)}
+                    onMouseLeave={() => setHoverM(false)}
+                    style={{
+                      background: hoverM
+                        ? dark
+                          ? "var(--light-dark-bg-color)"
+                          : "#d0d3d4"
+                        : dark
+                        ? "none"
+                        : "none",
+                      border: "none",
+                      height: "40px",
+                      width: "40px",
+                      borderRadius: "50%",
+                      cursor: "pointer",
+                      transition: "background 0.2s, color 0.2s",
+                    }}
+                  >
+                    <svg
+                      style={{
+                        width: "20px",
+                        height: "20px",
+                        cursor: "pointer",
+                        position: "relative",
+                        top: "6px",
+                        left: "10px",
+                      }}
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      fill={dark ? "#FFFFFF" : "#000000"}
+                      className="bi bi-mic"
+                      viewBox="0 0 16 16"
+                    >
+                      <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5" />
+                      <path d="M10 8a2 2 0 1 1-4 0V3a2 2 0 1 1 4 0zM8 0a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V3a3 3 0 0 0-3-3" />
+                    </svg>
+                  </div>
+
+                  {/* Send Icon */}
+                  {(inputValue.trim() || preview) && (
+                    <div
+                      onMouseEnter={() => setHoverS(true)}
+                      onMouseLeave={() => setHoverS(false)}
+                      style={{
+                        background: hoverS
+                          ? dark
+                            ? "var(--light-dark-bg-color)"
+                            : "#d0d3d4"
+                          : dark
+                          ? "none"
+                          : "none",
+                        border: "none",
+                        height: "40px",
+                        width: "40px",
+                        borderRadius: "50%",
+                        cursor: "pointer",
+                        transition: "background 0.2s, color 0.2s",
+                      }}
+                    >
+                      <svg
+                        onClick={() => {
+                          handleSend();
+                          changingClickable();
+                        }}
+                        style={{
+                          width: "20px",
+                          height: "20px",
+                          cursor: "pointer",
+                          position: "relative",
+                          top: "6px",
+                          left: "10px",
+                        }}
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        fill={dark ? "#FFFFFF" : "#000000"}
+                        className="bi bi-send"
+                        viewBox="0 0 16 16"
+                      >
+                        <path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995L.643 7.184a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11ZM6.636 10.07l2.761 4.338L14.13 2.576zm6.787-8.201L1.591 6.602l4.339 2.76z" />
+                      </svg>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
