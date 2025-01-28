@@ -210,7 +210,7 @@ def get_user_info():
     user = db.session.get(User, session["user_id"])
     if not user:
         return jsonify({"error": "User not found"}), 404
-
+    print(user.profile_picture)
     return jsonify({
         "name": user.name,
         "email": user.email,
@@ -400,6 +400,35 @@ def generate_title():
         # app.logger.error(f"Error in generate_title: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/add_model_response', methods=['POST'])
+def add_model_response():
+    if "user_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.get_json()
+    text = data.get('text')
+    chat_id = data.get('chat_id')
+
+    if not text or not chat_id:
+        return jsonify({"error": "Invalid data provided"}), 400
+
+    try:
+        # Create a new message
+        new_message = Message(
+            chat_id=chat_id,
+            sender='model',  # Indicating the message is from the model
+            content=text,
+        )
+
+        # Add to the database
+        db.session.add(new_message)
+        db.session.commit()
+
+        return jsonify({"message": "Model response added successfully"}), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
 
 @app.route('/api/add_message', methods=['POST'])
 def add_message():
@@ -448,13 +477,13 @@ def add_message():
         # model_response_content = tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
 
         ##Add model's response to the database
-        model_message = Message(
-            chat_id=chat_id,
-            sender="model",
-            content="It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout."
-        )
-        db.session.add(model_message)
-        db.session.commit()
+        # model_message = Message(
+        #     chat_id=chat_id,
+        #     sender="model",
+        #     content="It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout."
+        # )
+        # db.session.add(model_message)
+        # db.session.commit()
 
         return jsonify({"model_response": "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout."}), 200
 

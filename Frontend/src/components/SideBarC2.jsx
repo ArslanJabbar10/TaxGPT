@@ -184,7 +184,7 @@ const SideBarC2 = (props) => {
             fontWeight: "bold",
             color: dark ? "#FFFFFF" : "#333",
             fontSize: "14px",
-            marginTop: "20px",
+            marginTop: "15px",
           }}
         >
           {groupName}
@@ -252,6 +252,7 @@ const SideBarC2 = (props) => {
                   style={{
                     flex: 1,
                     textAlign: "left",
+                    fontWeight: "thin",
                     color: dark ? "#FFFFFF" : "#000000",
                     whiteSpace: "nowrap", // Prevent text wrapping
                     overflow: "hidden", // Hide overflowing text

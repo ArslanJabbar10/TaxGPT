@@ -40,7 +40,11 @@ const ChatArea = ({ messages, setMessages, activeChat, updateChatTitle }) => {
               overflowY: "auto", // Enable scrolling for the chat history only
             }}
           >
-            <ModelUserChat messages={messages} />
+            <ModelUserChat
+              messages={messages}
+              activeChat={activeChat}
+              setMessages={setMessages}
+            />
           </div>
 
           {/* Text Area for Sending Messages */}

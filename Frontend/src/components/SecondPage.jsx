@@ -159,7 +159,7 @@ const SecondPage = () => {
           { method: "GET", credentials: "include" }
         );
         const data = await response.json();
-        console.log("Raw messages from backend:", data.messages);
+        // console.log("Raw messages from backend:", data.messages);
         if (response.ok) {
           const formattedMessages = data.messages
             .map((msg) => ({
@@ -176,7 +176,7 @@ const SecondPage = () => {
                   ? a.id - b.id // Use id to break ties when created_at is the same
                   : a.created_at - b.created_at // Sort by created_at
             ); // Sort by created_at ascending
-          console.log("Formatted and sorted messages:", formattedMessages);
+          // console.log("Formatted and sorted messages:", formattedMessages);
           setMessages(formattedMessages);
           // Check if messages exist and set newChatClickable to true
           if (formattedMessages.length > 0) {

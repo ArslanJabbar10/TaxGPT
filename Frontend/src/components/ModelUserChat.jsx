@@ -14,7 +14,9 @@ const ModelUserChat = (props) => {
   const { setRunTime, runTimeResponse, stopped, setStopped } =
     useContext(DynamicRender);
   const [hoverState, setHoverState] = useState({}); // Object to track hover states
-  console.log(props.messages);
+  // console.log(props.messages);
+  // console.log(props.activeChat);
+
   const handleMouseEnter = (id, action) => {
     setHoverState((prev) => ({ ...prev, [`${id}-${action}`]: true }));
   };
@@ -34,18 +36,6 @@ const ModelUserChat = (props) => {
     }));
   };
 
-  // const [isLatestResponseDynamic, setIsLatestResponseDynamic] = useState(false);
-  // useEffect(() => {
-  //   if (
-  //     props.messages.length > 0 &&
-  //     props.messages[props.messages.length - 1]?.sender === "model"
-  //   ) {
-  //     setIsLatestResponseDynamic(true);
-  //   } else {
-  //     setIsLatestResponseDynamic(false);
-  //   }
-  // }, [props.messages]);
-
   // Fetch user info on component mount
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -58,7 +48,6 @@ const ModelUserChat = (props) => {
         if (response.ok) {
           setProfilePicture(data.profile_picture);
           setUserName(data.name);
-          console.log(data.profilePicture);
         } else {
           console.error("Failed to fetch user info:", data.error);
         }
@@ -66,7 +55,6 @@ const ModelUserChat = (props) => {
         console.error("Error fetching user info:", error);
       }
     };
-    console.log("pic");
     fetchUserInfo();
   }, []);
 
@@ -129,7 +117,7 @@ const ModelUserChat = (props) => {
         style={{
           flexGrow: 1,
           padding: "10px",
-          // overflowY: "auto",
+          //overflowY: "auto",
         }}
       >
         {props.messages.map((message, index) => (
@@ -279,9 +267,10 @@ const ModelUserChat = (props) => {
                 <div
                   style={{
                     maxWidth: "100%",
-                    padding: "10px 15px",
+                    padding:
+                      message.sender === "model" ? "5px 15px" : "10px 15px",
                     marginBottom: "10px",
-                    borderRadius: "10px",
+                    borderRadius: "15px",
                     backgroundColor:
                       message.sender === "user"
                         ? dark
@@ -290,8 +279,11 @@ const ModelUserChat = (props) => {
                         : dark
                         ? "none"
                         : "none",
-                    fontSize: "14px",
-                    color: dark ? "#FFFFFF" : "#000000",
+                    fontSize: "15.5px",
+                    fontFamily: "'Poppins', 'Nunito', 'Arial', sans-serif",
+                    fontWeight: "100",
+                    lineHeight: "1.8",
+                    color: dark ? "#e0e0e0" : "#2a2a2a",
                     textAlign: "left",
                   }}
                 >
@@ -303,6 +295,8 @@ const ModelUserChat = (props) => {
                       setRunTime={setRunTime}
                       stopped={stopped}
                       setStopped={setStopped}
+                      chatId={props.activeChat.id}
+                      setMessages={props.setMessages}
                     />
                   ) : (
                     message.text
@@ -456,10 +450,41 @@ const ModelUserChat = (props) => {
 };
 
 // DynamicTextRender Component
-const DynamicTextRender = ({ text, setRunTime, stopped, setStopped }) => {
+const DynamicTextRender = ({
+  text,
+  setRunTime,
+  stopped,
+  setStopped,
+  chatId,
+  setMessages,
+}) => {
   const [renderedText, setRenderedText] = useState(""); // Tracks the currently rendered text
   const indexRef = useRef(0); // Ref to track the current position in the text
   const intervalRef = useRef(null); // Ref to store the interval ID
+
+  const sendToBackend = async (textToSend) => {
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/add_model_response",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({ text: textToSend, chat_id: chatId }), // Sending renderedText
+        }
+      );
+
+      if (response.ok) {
+        console.log("Text sent to backend successfully!");
+      } else {
+        console.error("Failed to send text to backend", response.statusText);
+      }
+    } catch (error) {
+      console.error("Error while sending text to backend:", error);
+    }
+  };
 
   useEffect(() => {
     if (!text) return; // If there's no text, exit early
@@ -474,6 +499,7 @@ const DynamicTextRender = ({ text, setRunTime, stopped, setStopped }) => {
         } else {
           clearInterval(intervalRef.current); // Stop when all characters are rendered
           setRunTime(false);
+          sendToBackend(text);
         }
       }, 50); // Adjust speed as needed
     }
@@ -487,6 +513,28 @@ const DynamicTextRender = ({ text, setRunTime, stopped, setStopped }) => {
       clearInterval(intervalRef.current);
       setRunTime(false);
       setStopped(false);
+
+      sendToBackend(renderedText);
+      // Update the last message in the messages state
+      setMessages((prevMessages) => {
+        // Make a copy of the previous messages
+        const updatedMessages = [...prevMessages];
+
+        // Update the text of the last message
+        if (updatedMessages.length > 0) {
+          const lastMessageIndex = updatedMessages.length - 1;
+
+          // Check if the last message is from the model
+          if (updatedMessages[lastMessageIndex].sender === "model") {
+            updatedMessages[lastMessageIndex] = {
+              ...updatedMessages[lastMessageIndex],
+              text: renderedText, // Update the text with the current renderedText
+            };
+          }
+        }
+
+        return updatedMessages; // Return the updated messages array
+      });
     }
   }, [stopped]);
   console.log(renderedText);
