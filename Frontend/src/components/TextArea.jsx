@@ -32,7 +32,7 @@ const TextArea = (props) => {
     textarea.style.height = "auto";
 
     // Adjust the height dynamically, but not exceed the maxHeight
-    const newHeight = Math.min(textarea.scrollHeight, maxHeight);
+    const newHeight = Math.min(textarea.scrollHeight + 8, maxHeight);
 
     textarea.style.height = `${newHeight}px`;
 
@@ -159,6 +159,7 @@ const TextArea = (props) => {
   };
 
   const handleFileUpload = async (e) => {
+    console.log(preview);
     const file = e.target.files[0]; // Get the selected file
 
     if (file) {
@@ -178,7 +179,7 @@ const TextArea = (props) => {
         if (response.ok) {
           setFilePath(data.file_path);
           setFileType(data.file_type);
-          setPreview(`http://localhost:5000${data.file_path}`); // File URL
+          //setPreview(`http://localhost:5000${data.file_path}`); // File URL
         } else {
           setAlertMessage(data.error || "File upload failed");
           setShowAlert(true);
