@@ -501,7 +501,7 @@ const DynamicTextRender = ({
           setRunTime(false);
           sendToBackend(text);
         }
-      }, 50); // Adjust speed as needed
+      }, 20); // Adjust speed as needed
     }
 
     return () => clearInterval(intervalRef.current); // Cleanup interval on unmount or dependency change

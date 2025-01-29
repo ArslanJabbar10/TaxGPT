@@ -52,8 +52,6 @@ const SideBarC2 = (props) => {
   };
 
   const handleDelete = async (chat) => {
-    // const actualIndex = props.chats.length - 1 - index; // Reverse index calculation
-    // const chatToDelete = props.chats[actualIndex]; // Get the chat being deleted
     setClickable(false);
     try {
       const response = await fetch("http://localhost:5000/api/delete_chat", {
@@ -109,6 +107,20 @@ const SideBarC2 = (props) => {
     }
 
     setVisibleDropdown(null); // Close the dropdown
+  };
+
+  const totalChats =
+    props.chats.today.length +
+    props.chats.yesterday.length +
+    props.chats.past7Days.length +
+    props.chats.past30Days.length +
+    props.chats.older.length;
+
+  const handleDeleteClick = (chat) => {
+    // Only delete if there's more than 1 chat total
+    if (totalChats > 1) {
+      handleDelete(chat);
+    }
   };
 
   const saveChanges = async (chat) => {
@@ -361,8 +373,10 @@ const SideBarC2 = (props) => {
                     <a
                       className="dropdown-item d-flex gap-2 align-items-center"
                       href="#"
-                      onClick={() => handleDelete(chat)} // Trigger delete on click
+                      onClick={() => handleDeleteClick(chat)} // Trigger delete on click
                       style={{
+                        pointerEvents: totalChats <= 1 ? "none" : "auto",
+                        opacity: totalChats <= 1 ? 0.5 : 1,
                         outline: "none",
                         backgroundColor: "transparent",
                         boxShadow: "none",
