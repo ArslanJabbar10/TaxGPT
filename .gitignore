@@ -26,13 +26,16 @@ Frontend/playwright.config.js
 # Backend Specific
 Backend/__pycache__/
 Backend/.venv/
-Backend/testingPDFs/ 
+Backend/Data/ 
 Backend/.env
-Backend/vector_index.faiss
 Backend/chunks.json
 Backend/api_key.py
 Backend/migrations
 Backend/uploads/
+Backend/faiss_db/
+Backend/models/
+Backend/test.py
+Backend/processed_files.json
 
 # IDE/Editor Files
 .vscode/

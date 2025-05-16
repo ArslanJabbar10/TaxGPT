@@ -9,6 +9,9 @@ from sentence_transformers import SentenceTransformer
 from sqlalchemy import text
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from authlib.integrations.flask_client import OAuth
+from title_generation import ChatTitleBot
+from query_processor import QueryProcessor
+from groq_model import LLMClient
 from datetime import UTC, datetime
 from api_key import *
 from werkzeug.utils import secure_filename
@@ -82,29 +85,29 @@ google = oauth.register(
 
 # Load FAISS index and preprocessed chunks
 # print("Loading FAISS index and chunks...")
-index = faiss.read_index("vector_index.faiss")
-with open("chunks.json", "r") as f:
-    preprocessed_chunks = json.load(f)
+# index = faiss.read_index("vector_index.faiss")
+# with open("chunks.json", "r") as f:
+#     preprocessed_chunks = json.load(f)
 
-# Load embedding model
-# print("Loading embedding model...")
-embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+# # Load embedding model
+# # print("Loading embedding model...")
+# embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
 
-# Load GPT-Neo model and tokenizer
-# print("Loading GPT-Neo model and tokenizer...")
-model_name = "EleutherAI/gpt-neo-1.3B"
-tokenizer = AutoTokenizer.from_pretrained(model_name, token=True)
-tokenizer.pad_token = tokenizer.eos_token
-model = AutoModelForCausalLM.from_pretrained(model_name, token=True)
+# # Load GPT-Neo model and tokenizer
+# # print("Loading GPT-Neo model and tokenizer...")
+# model_name = "EleutherAI/gpt-neo-1.3B"
+# tokenizer = AutoTokenizer.from_pretrained(model_name, token=True)
+# tokenizer.pad_token = tokenizer.eos_token
+# model = AutoModelForCausalLM.from_pretrained(model_name, token=True)
 
-def search_index(query, index, embedding_model, preprocessed_chunks, top_k=3):
-    """
-    Search the FAISS index for the top_k most relevant chunks.
-    """
-    query_embedding = embedding_model.encode([query], convert_to_tensor=True).numpy()
-    distances, indices = index.search(np.array(query_embedding), top_k)
-    results = [preprocessed_chunks[idx] for idx in indices[0]]
-    return results
+# def search_index(query, index, embedding_model, preprocessed_chunks, top_k=3):
+#     """
+#     Search the FAISS index for the top_k most relevant chunks.
+#     """
+#     query_embedding = embedding_model.encode([query], convert_to_tensor=True).numpy()
+#     distances, indices = index.search(np.array(query_embedding), top_k)
+#     results = [preprocessed_chunks[idx] for idx in indices[0]]
+#     return results
 
 @app.route('/')
 def home():
@@ -344,48 +347,16 @@ def generate_title():
         chat_id = data.get("chat_id")
         user_message = data.get("user_message")
         model_response = data.get("model_response")
-        
-        # from here
-
-        # Log inputs for debugging
-        # app.logger.debug(f"Chat ID: {chat_id}, User Message: {user_message}, Model Response: {model_response}")
 
         if not chat_id or not user_message or not model_response:
             # app.logger.error("Missing required data.")
             return jsonify({"error": "Missing required data"}), 400
 
         # Combine user message and model response
-        combined_text = f"User: {user_message}\nModel: {model_response}"
-        input_text = f"generate a title: {combined_text}"
-
-        # Log input to model
-        # app.logger.debug(f"Input text for T5 model: {input_text}")
-
-        # Tokenize with attention mask
-        inputs = tokenizer(input_text, return_tensors="pt", truncation=True, padding=True)
-
-        # Generate a title using the T5 model
-        outputs = model.generate(
-            inputs.input_ids,
-            attention_mask=inputs.attention_mask,  # Include attention mask
-            max_new_tokens=15,  # Use max_new_tokens instead of max_length
-            num_beams=4,
-            early_stopping=True,
-            pad_token_id=tokenizer.eos_token_id,  # Explicitly set pad token
-        )
-        new_title = tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
-
-
-        # till here
-
-        # Truncate the title to fit the database column
-        max_title_length = 120
-        if len(new_title) > max_title_length:
-            new_title = new_title[:max_title_length]
-
-        # Log generated title
-        # app.logger.debug(f"Generated title (truncated): {new_title}")
-
+        combined_text = f"{user_message}\n{model_response}"
+        bot_title = ChatTitleBot()
+        new_title = bot_title.run(combined_text)
+       
         # Update the chat title in the database
         chat = Chat.query.filter_by(id=chat_id, user_id=session["user_id"]).first()
         if chat:
@@ -459,33 +430,28 @@ def add_message():
         )
         db.session.add(user_message)
         db.session.commit()
+        
+        messages = Message.query.filter_by(
+            chat_id=chat_id,
+            sender='user'
+        ).all()
+        
+        previous_chats_list = [msg.content for msg in messages]
+        separator = "\n"
+        previous_chat = separator.join(previous_chats_list)
+        print(f"Previous chat{previous_chat}")
+                
+        # contextFetch = QueryProcessor()
+        # context = contextFetch.get_relevant_context(content)
 
-        ##Retrieve relevant context using FAISS
-        # retrieved_chunks = search_index(content, index, embedding_model, preprocessed_chunks)
-        # retrieved_context = " ".join(retrieved_chunks)
-
-        # # Construct a GPT-Neo prompt with the retrieved context
-        # gpt_prompt = f"Context: {retrieved_context}\nQuestion: {content}\nAnswer:"
-        # inputs = tokenizer(gpt_prompt, return_tensors="pt", max_length=256, truncation=True, padding=True)
-        # outputs = model.generate(
-        #     inputs.input_ids,
-        #     attention_mask=inputs.attention_mask,
-        #     max_new_tokens=50,
-        #     num_beams=3,
-        #     early_stopping=True
-        # )
-        # model_response_content = tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
-
-        ##Add model's response to the database
-        # model_message = Message(
-        #     chat_id=chat_id,
-        #     sender="model",
-        #     content="It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout."
-        # )
-        # db.session.add(model_message)
-        # db.session.commit()
-
-        return jsonify({"model_response": "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout."}), 200
+        queryObject = QueryProcessor()
+        context = queryObject.get_relevant_context(content)
+        print (f"This is context = {context}")
+        
+        llm_client = LLMClient(api_key=os.getenv("GROQ_API"))
+        model_response = llm_client.generate(context, content, previous_chat)
+        print(model_response)
+        return jsonify({"model_response": model_response}), 200
 
     except Exception as e:
         db.session.rollback()
