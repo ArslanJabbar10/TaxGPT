@@ -72,7 +72,7 @@ PyMuPDF==1.24.14
 PyPDF2==3.0.1
 pytesseract==0.3.13
 python-dotenv==1.0.1
-pywin32==310
+# pywin32==310
 PyYAML==6.0.2
 qdrant-client==1.14.2
 regex==2024.11.6
