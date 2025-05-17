@@ -8,7 +8,7 @@ from title_generation import ChatTitleBot
 from query_processor import QueryProcessor
 from image_pdf_processing import FileProcessing
 from groq_model import LLMClient
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from api_key import *
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
@@ -37,7 +37,7 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     name = db.Column(db.String(100), nullable=True)
     profile_picture = db.Column(db.String(250), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.now(UTC))
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
     
     # One-to-many relationship: User -> Chats
     chats = db.relationship('Chat', backref='user', lazy=True)
@@ -46,7 +46,7 @@ class Chat(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     title = db.Column(db.String(120), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.now(UTC))
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
     hash_id = db.Column(db.String(36), default=lambda: str(uuid.uuid4()))  
 
     # One-to-many relationship: Chat -> Messages
@@ -59,7 +59,7 @@ class Message(db.Model):
     content = db.Column(db.Text, nullable=False)
     file_path = db.Column(db.String(250), nullable=True)  # For file storage
     file_type = db.Column(db.String(50), nullable=True)   # For file type (e.g., 'image/png')
-    created_at = db.Column(db.DateTime, default=datetime.now(UTC))
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
 
 
 # OAuth configuration
