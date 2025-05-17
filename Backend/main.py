@@ -1,16 +1,12 @@
 import uuid
-import faiss
-from flask import Flask, json, request, jsonify, render_template, redirect, url_for, session, make_response, send_from_directory
+from flask import Flask, request, jsonify, redirect, url_for, session, send_from_directory
 from flask_cors import CORS
-# from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
-import numpy as np
-from sentence_transformers import SentenceTransformer
 from sqlalchemy import text
-from transformers import AutoModelForCausalLM, AutoTokenizer
 from authlib.integrations.flask_client import OAuth
 from title_generation import ChatTitleBot
 from query_processor import QueryProcessor
+from image_pdf_processing import FileProcessing
 from groq_model import LLMClient
 from datetime import UTC, datetime
 from api_key import *
@@ -83,31 +79,6 @@ google = oauth.register(
     client_kwargs={'scope': 'openid email profile'}
 )
 
-# Load FAISS index and preprocessed chunks
-# print("Loading FAISS index and chunks...")
-# index = faiss.read_index("vector_index.faiss")
-# with open("chunks.json", "r") as f:
-#     preprocessed_chunks = json.load(f)
-
-# # Load embedding model
-# # print("Loading embedding model...")
-# embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-
-# # Load GPT-Neo model and tokenizer
-# # print("Loading GPT-Neo model and tokenizer...")
-# model_name = "EleutherAI/gpt-neo-1.3B"
-# tokenizer = AutoTokenizer.from_pretrained(model_name, token=True)
-# tokenizer.pad_token = tokenizer.eos_token
-# model = AutoModelForCausalLM.from_pretrained(model_name, token=True)
-
-# def search_index(query, index, embedding_model, preprocessed_chunks, top_k=3):
-#     """
-#     Search the FAISS index for the top_k most relevant chunks.
-#     """
-#     query_embedding = embedding_model.encode([query], convert_to_tensor=True).numpy()
-#     distances, indices = index.search(np.array(query_embedding), top_k)
-#     results = [preprocessed_chunks[idx] for idx in indices[0]]
-#     return results
 
 @app.route('/')
 def home():
@@ -190,6 +161,13 @@ def upload_file():
 @app.route('/uploads/<path:filename>', methods=['GET'])
 def serve_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+def resolve_uploaded_file_path(filename: str) -> str:
+    """Converts public-facing /uploads/... path to real file system path."""
+    # Remove the '/uploads/' prefix if it's there
+    if filename.startswith('/uploads/'):
+        filename = filename.replace('/uploads/', '', 1)
+    return os.path.join(app.config['UPLOAD_FOLDER'], filename)
 
 
 @app.route('/api/get_chats', methods=['GET'])
@@ -441,15 +419,29 @@ def add_message():
         previous_chat = separator.join(previous_chats_list)
         print(f"Previous chat{previous_chat}")
                 
-        # contextFetch = QueryProcessor()
-        # context = contextFetch.get_relevant_context(content)
+        contextFetch = QueryProcessor()
+        context = contextFetch.get_relevant_context(content)
 
         queryObject = QueryProcessor()
         context = queryObject.get_relevant_context(content)
         print (f"This is context = {context}")
         
+        file_attached_data = ""
+        print (file_path)
+        if file_path:
+            correct_file_path = resolve_uploaded_file_path(file_path)
+            img_pdf = FileProcessing()
+            if file_path.endswith(".pdf") or file_path.endswith(".docx"):
+                file_attached_data = img_pdf.extract_text_from_pdf(correct_file_path)
+            elif file_path.endswith(".png") or file_path.endswith(".jpg") or file_path.endswith(".jpeg") or file_path.endswith(".PNG") or file_path.endswith(".JPG") or file_path.endswith(".JPEG"):
+                file_attached_data = img_pdf.extract_text_from_image(correct_file_path)
+            else:
+                print("Unsupported file type!")
+        
+        print(f"This is data fetched from attached file:\n{file_attached_data}")
+        
         llm_client = LLMClient(api_key=os.getenv("GROQ_API"))
-        model_response = llm_client.generate(context, content, previous_chat)
+        model_response = llm_client.generate(context, content, previous_chat, file_attached_data)
         print(model_response)
         return jsonify({"model_response": model_response}), 200
 
@@ -457,9 +449,6 @@ def add_message():
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
     
-
-
-
 
 if __name__ == '__main__':
     app.run(debug=True)

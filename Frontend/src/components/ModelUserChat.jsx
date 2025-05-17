@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
+import ReactMarkdown from "react-markdown";
 import model from "../assets/model.svg";
 import { ChatClickable } from "./SecondPage";
 import { DarkMode } from "./SecondPage";
@@ -268,7 +269,9 @@ const ModelUserChat = (props) => {
                   style={{
                     maxWidth: "100%",
                     padding:
-                      message.sender === "model" ? "5px 15px" : "10px 15px",
+                      message.sender === "model"
+                        ? "5px 15px"
+                        : "10px 15px 5px 15px",
                     marginBottom: "10px",
                     borderRadius: "15px",
                     backgroundColor:
@@ -299,7 +302,7 @@ const ModelUserChat = (props) => {
                       setMessages={props.setMessages}
                     />
                   ) : (
-                    message.text
+                    <ReactMarkdown>{message.text}</ReactMarkdown>
                   )}
                   {/* SVG Actions Row (only for model messages) */}
                   {message.sender === "model" && (
@@ -490,18 +493,25 @@ const DynamicTextRender = ({
     if (!text) return; // If there's no text, exit early
 
     if (!stopped) {
+      console.log(text);
       // Start rendering text only if not stopped
       intervalRef.current = setInterval(() => {
         if (indexRef.current < text.length) {
-          const currentText = text.slice(0, indexRef.current + 1); // Take substring up to the current index
-          setRenderedText(currentText); // Update the rendered text
+          const char = text.charAt(indexRef.current);
+
+          setRenderedText((prev) => {
+            // Handle newlines and bullets naturally
+            if (char === "\n") return prev + "\n";
+            if (char === "•" && !prev.endsWith("\n")) return prev + "\n•";
+            return prev + char;
+          });
           indexRef.current++; // Increment index
         } else {
           clearInterval(intervalRef.current); // Stop when all characters are rendered
           setRunTime(false);
           sendToBackend(text);
         }
-      }, 20); // Adjust speed as needed
+      }, 5); // Adjust speed as needed
     }
 
     return () => clearInterval(intervalRef.current); // Cleanup interval on unmount or dependency change
@@ -513,7 +523,6 @@ const DynamicTextRender = ({
       clearInterval(intervalRef.current);
       setRunTime(false);
       setStopped(false);
-
       sendToBackend(renderedText);
       // Update the last message in the messages state
       setMessages((prevMessages) => {
@@ -538,7 +547,7 @@ const DynamicTextRender = ({
     }
   }, [stopped]);
   console.log(renderedText);
-  return <span>{renderedText}</span>;
+  return <ReactMarkdown>{renderedText}</ReactMarkdown>;
 };
 
 export default ModelUserChat;
