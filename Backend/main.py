@@ -66,8 +66,8 @@ class Message(db.Model):
 oauth = OAuth(app)
 google = oauth.register(
     name='google',
-    client_id=CLIENT_ID,
-    client_secret=CLIENT_SECRET,
+    client_id=os.getenv("CLIENT_ID"),
+    client_secret=os.getenv("CLIENT_SECRET"),
     server_metadata_uri='https://accounts.google.com/.well-known/openid-configuration',
     authorize_url="https://accounts.google.com/o/oauth2/v2/auth",
     token_endpoint="https://oauth2.googleapis.com/token",
