@@ -9,7 +9,6 @@ from query_processor import QueryProcessor
 from image_pdf_processing import FileProcessing
 from groq_model import LLMClient
 from datetime import datetime, timezone
-from api_key import *
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 import os
