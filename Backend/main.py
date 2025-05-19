@@ -1,4 +1,5 @@
 import uuid
+import traceback
 from flask import Flask, request, jsonify, redirect, url_for, session, send_from_directory
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
@@ -8,6 +9,7 @@ from title_generation import ChatTitleBot
 from query_processor import QueryProcessor
 from image_pdf_processing import FileProcessing
 from groq_model import LLMClient
+from tokens_check import num_tokens_from_string, trim_text_to_token_limit
 from datetime import datetime, timezone
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
@@ -421,8 +423,6 @@ def add_message():
         contextFetch = QueryProcessor()
         context = contextFetch.get_relevant_context(content)
 
-        queryObject = QueryProcessor()
-        context = queryObject.get_relevant_context(content)
         print (f"This is context = {context}")
         
         file_attached_data = ""
@@ -436,6 +436,19 @@ def add_message():
                 file_attached_data = img_pdf.extract_text_from_image(correct_file_path)
             else:
                 print("Unsupported file type!")
+            MAX_TOTAL_TOKENS = 6000
+            RESERVED_FOR_MODEL_RESPONSE = 500  # buffer for model output
+            MAX_INPUT_TOKENS = MAX_TOTAL_TOKENS - RESERVED_FOR_MODEL_RESPONSE
+
+            # Count tokens for parts you control
+            context_tokens = num_tokens_from_string(context)
+            content_tokens = num_tokens_from_string(content)
+            previous_chat_tokens = num_tokens_from_string(previous_chat)
+
+            used_tokens = context_tokens + content_tokens + previous_chat_tokens
+
+            available_tokens_for_file_data = MAX_INPUT_TOKENS - used_tokens
+            file_attached_data = trim_text_to_token_limit(file_attached_data, available_tokens_for_file_data)
         
         print(f"This is data fetched from attached file:\n{file_attached_data}")
         
@@ -445,8 +458,9 @@ def add_message():
         return jsonify({"model_response": model_response}), 200
 
     except Exception as e:
+        print(f"Full error traceback: {traceback.format_exc()}")
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
     
 
 if __name__ == '__main__':

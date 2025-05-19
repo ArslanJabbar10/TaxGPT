@@ -33,6 +33,7 @@ Backend/api_key.py
 Backend/migrations
 Backend/uploads/
 Backend/faiss_db/
+Backend/original_faiss_db/
 Backend/models/
 Backend/test.py
 Backend/processed_files.json

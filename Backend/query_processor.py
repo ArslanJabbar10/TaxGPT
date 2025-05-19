@@ -1,11 +1,10 @@
-from sentence_transformers import SentenceTransformer
 from langchain_community.embeddings import SentenceTransformerEmbeddings
 from langchain_community.vectorstores import FAISS
 
 class QueryProcessor:
     def __init__(
         self,
-        faiss_dir: str = r"E:\Final Year Project\TaxPK\Backend\faiss_db",
+        faiss_dir: str = r"E:\Final Year Project\TaxPK\Backend\original_faiss_db",
         embedding_model_path: str = r"E:\Final Year Project\TaxPK\Backend\models",
     ):
         """
